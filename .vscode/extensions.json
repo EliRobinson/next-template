@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-playwright.playwright",
+    "orta.vscode-jest",
+    "streetsidesoftware.code-spell-checker",
+    "usernamehw.errorlens"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separatePatchReleases",
+    "security:openssf-scorecard",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rebaseWhen": "conflicted",
+  "labels": ["dependencies"],
+  "vulnerabilityAlerts": {
+    "labels": ["security", "dependencies"],
+    "automerge": true,
+    "automergeType": "pr",
+    "automergeStrategy": "squash"
+  },
+  "packageRules": [
+    {
+      "description": "Auto-merge non-breaking devDependency updates",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Auto-merge stable patch updates for production deps",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch"],
+      "matchCurrentVersion": "!/^0\\./",
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Group all TanStack updates",
+      "matchPackagePrefixes": ["@tanstack/"],
+      "groupName": "TanStack"
+    },
+    {
+      "description": "Group all testing library updates",
+      "matchPackagePrefixes": ["@testing-library/"],
+      "groupName": "Testing Library"
+    },
+    {
+      "description": "Group TypeScript ESLint packages",
+      "matchPackagePrefixes": ["@typescript-eslint/"],
+      "groupName": "TypeScript ESLint"
+    },
+    {
+      "description": "Require manual review for major version bumps",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "major-update"]
+    },
+    {
+      "description": "Pin GitHub Actions to digest (security)",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    }
+  ]
+}
