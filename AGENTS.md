@@ -6,28 +6,30 @@ This file is the single source of truth for AI agents and humans working in this
 
 ## Project Overview
 
-A production-ready **Next.js 15** starter template. Built with the App Router, TypeScript strict mode, Tailwind CSS v4, shadcn/ui components, TanStack data libraries, and a full quality-gate toolchain.
+A production-ready **Next.js 15** starter template. Built with the App Router, TypeScript strict mode, Tailwind CSS v4, shadcn/ui components, TanStack data libraries, an optional Drizzle/Postgres database layer, and a full quality-gate toolchain.
 
 ---
 
 ## Tech Stack
 
-| Layer | Choice |
-|---|---|
-| Framework | Next.js 15 (App Router, Turbopack) |
-| Language | TypeScript 5 (strict, `@/*` path alias → `src/*`) |
-| Styling | Tailwind CSS v4 + shadcn/ui (New York style, neutral base) |
-| Data fetching | TanStack Query v5 |
-| Tables | TanStack Table v8 |
-| Forms | TanStack Form |
-| Virtualization | TanStack Virtual |
-| Unit/integration tests | Jest + React Testing Library |
-| E2E / functional tests | Playwright |
-| Package manager | pnpm |
-| Linting | ESLint (Next.js flat config + TypeScript ESLint) |
-| Formatting | Prettier (with `prettier-plugin-tailwindcss`) |
-| Commits | Commitizen + Commitlint (Conventional Commits) |
-| Dependency updates | Renovate (auto-merge patch/minor + security) |
+| Layer                  | Choice                                                     |
+| ---------------------- | ---------------------------------------------------------- |
+| Framework              | Next.js 15 (App Router, Turbopack)                         |
+| Language               | TypeScript 5 (strict, `@/*` path alias → `src/*`)          |
+| Styling                | Tailwind CSS v4 + shadcn/ui (New York style, neutral base) |
+| Data fetching          | TanStack Query v5                                          |
+| Tables                 | TanStack Table v8                                          |
+| Forms                  | TanStack Form                                              |
+| Virtualization         | TanStack Virtual                                           |
+| Env validation         | `@t3-oss/env-nextjs` + Zod (`src/env.ts`)                  |
+| Database (optional)    | Drizzle ORM + Postgres (`src/server/db/`)                  |
+| Unit/integration tests | Vitest + React Testing Library                             |
+| E2E / functional tests | Playwright                                                 |
+| Package manager        | pnpm                                                       |
+| Linting                | ESLint (Next.js flat config + TypeScript ESLint)           |
+| Formatting             | Prettier (with `prettier-plugin-tailwindcss`)              |
+| Commits                | Commitizen + Commitlint (Conventional Commits)             |
+| Dependency updates     | Renovate (auto-merge patch/minor + security)               |
 
 ---
 
@@ -42,9 +44,13 @@ src/
   hooks/         # Custom React hooks
   lib/
     utils.ts     # cn() and shared utilities
+  server/
+    actions/     # Server actions (Zod-validated input)
+    db/          # Drizzle schema + connection (optional — delete if unused)
   types/         # Shared TypeScript types
+  env.ts         # Validated environment variables (@t3-oss/env-nextjs + Zod)
 tests/
-  unit/          # Jest + RTL unit & integration tests
+  unit/          # Vitest + RTL unit & integration tests
 e2e/             # Playwright end-to-end tests
 ```
 
@@ -59,9 +65,12 @@ pnpm lint         # ESLint check
 pnpm lint:fix     # ESLint auto-fix
 pnpm format       # Prettier write
 pnpm type-check   # tsc --noEmit
-pnpm test         # Jest (unit)
+pnpm test         # Vitest (unit)
 pnpm test:e2e     # Playwright (E2E)
 pnpm commit       # Commitizen interactive commit
+pnpm db:generate  # Generate a Drizzle migration from schema changes
+pnpm db:migrate   # Apply pending Drizzle migrations
+pnpm db:studio    # Open Drizzle Studio
 ```
 
 ---
@@ -69,34 +78,40 @@ pnpm commit       # Commitizen interactive commit
 ## Coding Conventions
 
 ### TypeScript
+
 - Strict mode is on — no implicit `any`, no unchecked nulls.
 - Use type imports: `import type { Foo } from "./foo"`.
 - Prefer `interface` for object shapes that may be extended; `type` for unions/intersections.
 - Path alias `@/` maps to `src/`.
 
 ### React & Next.js
+
 - Default to **Server Components**. Add `"use client"` only when browser APIs or hooks are required.
 - Co-locate data-fetching with the server component that needs it.
 - Keep Client Components as leaf nodes. Lift them out only when the boundary needs to move.
 - Use `next/image` and `next/link` instead of `<img>` and `<a>`.
 
 ### Styling
+
 - Use Tailwind utility classes directly on JSX. Avoid custom CSS files except for CSS variables in `globals.css`.
 - Use `cn()` (from `@/lib/utils`) to merge conditional classes.
 - Class order is enforced by `prettier-plugin-tailwindcss` — don't hand-sort.
 - shadcn components live in `src/components/ui/`. Add them via `pnpm dlx shadcn@latest add <component>`, never manually.
 
 ### TanStack Query
+
 - Wrap queries in custom hooks inside `src/hooks/` (e.g. `useUsers.ts`).
 - Export query key factories alongside hooks for cache invalidation.
 - Use `suspense: true` + `<Suspense>` boundaries for loading states when possible.
 
 ### Error Handling
+
 - Validate external input at system boundaries only (API routes, form submissions).
 - Use Next.js `error.tsx` files for route-level error boundaries.
 - Do not add defensive try/catch for code that cannot throw.
 
 ### Comments
+
 - Write no comments by default. Only add one when the WHY is non-obvious: a hidden constraint, a workaround, or a subtle invariant.
 - Do not comment what the code does — well-named identifiers handle that.
 
@@ -124,7 +139,8 @@ Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` wil
 
 ## Testing Strategy
 
-### Unit / integration (Jest + RTL)
+### Unit / integration (Vitest + RTL)
+
 - Test files live in `tests/unit/` with the pattern `*.test.tsx`.
 - Test user-visible behavior, not implementation details.
 - Use `userEvent` over `fireEvent` for user interactions.
@@ -132,6 +148,7 @@ Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` wil
 - Coverage threshold: 70% branches/functions/lines.
 
 ### E2E (Playwright)
+
 - Test files live in `e2e/` with the pattern `*.spec.ts`.
 - Test critical user paths end-to-end against a running dev server.
 - Use `page.getByRole()` and `page.getByText()` selectors (accessibility-first).
@@ -153,6 +170,7 @@ Components are added to `src/components/ui/` and can be customized freely. Never
 ## Pre-commit Checks (Husky)
 
 The `pre-commit` hook runs `lint-staged`:
+
 - `*.{ts,tsx,js,jsx}` → ESLint fix + Prettier
 - `*.{json,css,md,yml}` → Prettier
 
@@ -165,6 +183,7 @@ To skip hooks in an emergency: `git commit --no-verify` (discouraged — fix the
 ## Renovate Bot
 
 Renovate runs automatically and:
+
 - **Auto-merges** patch updates to production deps and minor+patch updates to devDependencies (when CI passes).
 - **Auto-merges** security vulnerability fixes.
 - **Requires manual review** for all major version bumps.
@@ -175,9 +194,13 @@ Renovate runs automatically and:
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` for local development (create `.env.example` when you add the first env var). Never commit `.env.local` or any file containing secrets.
+Copy `.env.example` to `.env.local` for local development. Never commit `.env.local` or any file containing secrets.
 
-Prefix client-side variables with `NEXT_PUBLIC_`.
+All env vars are declared and validated in `src/env.ts` (via `@t3-oss/env-nextjs` + Zod) — add new vars there, not just to `.env.example`. The build fails fast if a required var is missing or invalid, rather than failing at runtime in production. Prefix client-side variables with `NEXT_PUBLIC_` and list them in the `client` block of `src/env.ts`.
+
+## Database (optional)
+
+`src/server/db/` (Drizzle ORM + Postgres) and `src/server/actions/` (server actions) are scaffolding for projects that need a database — not required by default. `DATABASE_URL` is optional in `src/env.ts`. If a project doesn't need a database, delete `src/server/db/`, `drizzle.config.ts`, `DATABASE_URL` from `src/env.ts`, the `db:*` scripts, and `drizzle-orm`/`postgres`/`drizzle-kit` from `package.json`.
 
 ---
 

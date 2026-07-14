@@ -1,7 +1,1 @@
-# Load nvm / fnm / volta so pnpm is available in git hooks
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && nvm use --silent
-[ -s "$HOME/.config/fnm/fnm" ] && eval "$(fnm env --use-on-cd)"
-[ -s "$HOME/.volta/bin/volta" ] && export PATH="$HOME/.volta/bin:$PATH"
-
 pnpm --no-install commitlint --edit "$1"

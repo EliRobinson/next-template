@@ -8,8 +8,9 @@ test.describe("Home page", () => {
 
   test("displays the tech stack cards", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Next.js 15")).toBeVisible();
-    await expect(page.getByText("Tailwind CSS 4")).toBeVisible();
-    await expect(page.getByText("shadcn/ui")).toBeVisible();
+    const stackCards = page.locator(".grid");
+    await expect(stackCards.getByText("Next.js 15", { exact: true })).toBeVisible();
+    await expect(stackCards.getByText("Tailwind CSS 4", { exact: true })).toBeVisible();
+    await expect(stackCards.getByText("shadcn/ui", { exact: true })).toBeVisible();
   });
 });
