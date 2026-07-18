@@ -6,11 +6,10 @@ test.describe("Home page", () => {
     await expect(page.getByRole("heading", { name: "Next Template" })).toBeVisible();
   });
 
-  test("displays the tech stack cards", async ({ page }) => {
+  test("displays the tech stack", async ({ page }) => {
     await page.goto("/");
-    const stackCards = page.locator(".grid");
-    await expect(stackCards.getByText("Next.js 15", { exact: true })).toBeVisible();
-    await expect(stackCards.getByText("Tailwind CSS 4", { exact: true })).toBeVisible();
-    await expect(stackCards.getByText("shadcn/ui", { exact: true })).toBeVisible();
+    await expect(page.getByText("Next.js 15", { exact: true })).toBeVisible();
+    await expect(page.getByText("Tailwind CSS 4", { exact: true })).toBeVisible();
+    await expect(page.getByText("shadcn/ui", { exact: true })).toBeVisible();
   });
 });

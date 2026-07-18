@@ -13,7 +13,17 @@ const globalForDb = globalThis as unknown as {
   conn: postgres.Sql | undefined;
 };
 
-const conn = globalForDb.conn ?? postgres(env.DATABASE_URL ?? "");
-if (env.NODE_ENV !== "production") globalForDb.conn = conn;
+function createConnection() {
+  const url = env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is not set. Add it to .env.local, or delete src/server/db/ if this project does not need a database.",
+    );
+  }
 
-export const db = drizzle(conn, { schema });
+  const conn = globalForDb.conn ?? postgres(url);
+  if (env.NODE_ENV !== "production") globalForDb.conn = conn;
+  return conn;
+}
+
+export const db = drizzle(createConnection(), { schema });
