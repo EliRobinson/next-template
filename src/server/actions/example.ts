@@ -1,6 +1,6 @@
-"use server";
+'use server';
 
-import { z } from "zod";
+import { z } from 'zod';
 
 const inputSchema = z.object({
   name: z.string().min(1),

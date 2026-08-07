@@ -171,9 +171,13 @@ Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` wil
 The default source for UI components — check here **before** adding a shadcn component or hand-rolling one. Full inventory and Storybook docs: [EliRobinson/design-system](https://github.com/EliRobinson/design-system).
 
 ```tsx
-import { Button } from "@elirobinson/react/components/Button";
-import { Card, CardHeader, CardTitle } from "@elirobinson/react/components/Card";
-import { Input } from "@elirobinson/react/components/Input";
+import { Button } from '@elirobinson/react/components/Button';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+} from '@elirobinson/react/components/Card';
+import { Input } from '@elirobinson/react/components/Input';
 ```
 
 Covers: actions & feedback (`Button`, `Badge`, `Alert`, `Toast`/`Toaster`/`useToast`, `Progress`, `Skeleton`), forms (`Input`, `Textarea`, `Select`, `Label`, `Checkbox`, `Switch`), layout & navigation (`Card`, `Separator`, `Tabs`, `Breadcrumb`, `Avatar`), overlays (`Dialog`, `Sheet`, `DropdownMenu`, `Popover`, `Tooltip`), and marketing typography (`Eyebrow`, `RuleLink`). Marketing layout patterns (Header, Footer, Hero, Sidebar, TopBar) are documented in Storybook under **Patterns/Marketing** — compose them from primitives rather than importing fixed layout components.

@@ -97,7 +97,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Use a design system component
 
 ```tsx
-import { Button } from "@elirobinson/react/components/Button";
+import { Button } from '@elirobinson/react/components/Button';
 ```
 
 `@elirobinson/react` ([source](https://github.com/EliRobinson/design-system)) is the default component source — check its inventory before adding shadcn or hand-rolling anything. Tokens (`@elirobinson/tokens/tokens.css`) and component styles (`@elirobinson/react/styles.css`) are already imported in `src/app/layout.tsx`.
@@ -125,13 +125,13 @@ Components land in `src/components/ui/` as owned source — edit them freely. Se
 Create a file in `tests/unit/` ending in `.test.tsx`:
 
 ```tsx
-import { render, screen } from "@testing-library/react";
-import { MyComponent } from "@/components/my-component";
+import { render, screen } from '@testing-library/react';
+import { MyComponent } from '@/components/my-component';
 
-describe("MyComponent", () => {
-  it("renders the title", () => {
+describe('MyComponent', () => {
+  it('renders the title', () => {
     render(<MyComponent title="Hello" />);
-    expect(screen.getByText("Hello")).toBeInTheDocument();
+    expect(screen.getByText('Hello')).toBeInTheDocument();
   });
 });
 ```
@@ -149,11 +149,11 @@ pnpm test:coverage   # with coverage report
 Create a file in `e2e/` ending in `.spec.ts`:
 
 ```ts
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
-test("home page loads", async ({ page }) => {
-  await page.goto("/");
-  await expect(page.getByRole("heading")).toBeVisible();
+test('home page loads', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading')).toBeVisible();
 });
 ```
 

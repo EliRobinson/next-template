@@ -1,19 +1,19 @@
-import path from "node:path";
-import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import path from 'node:path';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
-    setupFiles: ["./tests/unit/setup.ts"],
+    environment: 'jsdom',
+    setupFiles: ['./tests/unit/setup.ts'],
     css: true,
-    include: ["tests/unit/**/*.test.{ts,tsx}"],
+    include: ['tests/unit/**/*.test.{ts,tsx}'],
     coverage: {
-      provider: "v8",
-      reporter: ["text", "html"],
+      provider: 'v8',
+      reporter: ['text', 'html'],
       // Scope thresholds to modules under test. Widen this as real app tests land.
-      include: ["src/lib/**/*.{ts,tsx}"],
+      include: ['src/lib/**/*.{ts,tsx}'],
       thresholds: {
         branches: 70,
         functions: 70,
@@ -24,7 +24,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
     },
   },
 });
