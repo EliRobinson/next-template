@@ -193,7 +193,7 @@ Components are added to `src/components/ui/` and can be customized freely. Never
 
 ---
 
-## Pre-commit Checks (Husky)
+## Git Hooks (Husky)
 
 The `pre-commit` hook runs `lint-staged`:
 
@@ -202,7 +202,9 @@ The `pre-commit` hook runs `lint-staged`:
 
 The `commit-msg` hook runs `commitlint` to enforce Conventional Commits.
 
-To skip hooks in an emergency: `git commit --no-verify` (discouraged — fix the underlying issue instead).
+The `pre-push` hook mirrors the fast CI jobs (`pnpm type-check`, `pnpm lint`, `pnpm format:check`, `pnpm test`) so a push that would fail CI fails locally first, before consuming a CI run. It intentionally skips the `build` and `test:e2e` steps from the `e2e` CI job — those are slower and still run on the PR itself.
+
+To skip hooks in an emergency: `git commit --no-verify` / `git push --no-verify` (discouraged — fix the underlying issue instead).
 
 ---
 
