@@ -226,7 +226,14 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 
 All env vars are declared and validated in `src/env.ts` (via `@t3-oss/env-nextjs` + Zod) — add new vars there, not just to `.env.example`. The build fails fast if a required var is missing or invalid, rather than failing at runtime in production. Prefix client-side variables with `NEXT_PUBLIC_` and list them in the `client` block of `src/env.ts`.
 
-Installing or updating `@elirobinson/tokens` / `@elirobinson/react` requires a GitHub PAT with `read:packages`, exported as `NODE_AUTH_TOKEN` (`.npmrc` at the repo root points the `@elirobinson` scope at the GitHub Packages registry). This is a local/CI install-time credential, not an app env var — it does not go in `src/env.ts` or `.env.local`.
+Installing or updating `@elirobinson/tokens` / `@elirobinson/react` requires a GitHub PAT with `read:packages`, set as `NODE_AUTH_TOKEN` (`.npmrc` at the repo root points the `@elirobinson` scope at the GitHub Packages registry). It's an install-time credential, not an app runtime var, so it's kept in `.env.local` rather than declared in `src/env.ts`/Zod. **`.env.local` isn't auto-loaded by pnpm/npm** — export it into your shell before installing:
+
+```bash
+export $(grep -v '^#' .env.local | xargs)
+pnpm install
+```
+
+CI reads the equivalent value from the `NODE_AUTH_TOKEN` repository secret (wired into each job in `.github/workflows/ci.yml`), not from this file.
 
 ## Database (optional)
 

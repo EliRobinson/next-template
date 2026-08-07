@@ -10,6 +10,6 @@ test.describe("Home page", () => {
     await page.goto("/");
     await expect(page.getByText("Next.js 15", { exact: true })).toBeVisible();
     await expect(page.getByText("Tailwind CSS 4", { exact: true })).toBeVisible();
-    await expect(page.getByText("shadcn/ui", { exact: true })).toBeVisible();
+    await expect(page.getByText("@elirobinson/react", { exact: true })).toBeVisible();
   });
 });
