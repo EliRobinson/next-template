@@ -14,7 +14,7 @@ A production-ready Next.js 15 starter. Clone it, rename it, ship it.
 | Tables             | [TanStack Table v8](https://tanstack.com/table)                                                          | Headless, fully typed                                                                                 |
 | Forms              | [TanStack Form](https://tanstack.com/form)                                                               | Type-safe, validation-ready                                                                           |
 | Virtualization     | [TanStack Virtual](https://tanstack.com/virtual)                                                         | Lists and grids                                                                                       |
-| Unit tests         | [Jest](https://jestjs.io) + [React Testing Library](https://testing-library.com)                         | 70% coverage threshold                                                                                |
+| Unit tests         | [Vitest](https://vitest.dev) + [React Testing Library](https://testing-library.com)                      | 70% coverage threshold                                                                                |
 | E2E tests          | [Playwright](https://playwright.dev)                                                                     | Chromium, Firefox, Safari, Mobile Chrome                                                              |
 | Linting            | [ESLint v9](https://eslint.org)                                                                          | Flat config, Next.js rules + [`neostandard`](https://github.com/neostandard/neostandard) (StandardJS) |
 | Formatting         | [Prettier v3](https://prettier.io)                                                                       | `prettier-config-standard` + `prettier-plugin-tailwindcss` for class sorting                          |
@@ -80,7 +80,7 @@ Open [http://localhost:3000](http://localhost:3000).
 │   │   └── utils.ts          # cn() helper (clsx + tailwind-merge)
 │   └── types/                # Shared TypeScript types
 ├── tests/
-│   └── unit/                 # Jest + RTL tests (*.test.tsx)
+│   └── unit/                 # Vitest + RTL tests (*.test.tsx)
 ├── e2e/                      # Playwright tests (*.spec.ts)
 ├── .github/
 │   └── workflows/ci.yml      # CI pipeline
@@ -200,7 +200,7 @@ The subject must be lowercase. Breaking changes: use `feat!:` and add a `BREAKIN
 pnpm type-check    # TypeScript
 pnpm lint          # ESLint
 pnpm format:check  # Prettier
-pnpm test          # Jest
+pnpm test          # Vitest
 ```
 
 ---
@@ -238,11 +238,11 @@ To enable: install the [Renovate GitHub App](https://github.com/apps/renovate) o
 
 GitHub Actions runs on every push and pull request to `main`. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-| Job       | What it does                                      |
-| --------- | ------------------------------------------------- |
-| `quality` | `type-check`, `lint`, `format:check`              |
-| `unit`    | `jest --coverage`, uploads coverage artifact      |
-| `e2e`     | Playwright on Chromium against a production build |
+| Job       | What it does                                       |
+| --------- | -------------------------------------------------- |
+| `quality` | `type-check`, `lint`, `format:check`               |
+| `unit`    | `vitest run --coverage`, uploads coverage artifact |
+| `e2e`     | Playwright on Chromium against a production build  |
 
 Set up branch protection on `main` to require all three jobs before merging.
 
