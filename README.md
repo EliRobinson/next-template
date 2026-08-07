@@ -4,25 +4,25 @@ A production-ready Next.js 15 starter. Clone it, rename it, ship it.
 
 ## What's included
 
-| Category           | Tool                                                                                                     | Notes                                                |
-| ------------------ | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Framework          | [Next.js 15](https://nextjs.org)                                                                         | App Router, Turbopack dev server                     |
-| Language           | [TypeScript 5](https://www.typescriptlang.org)                                                           | Strict mode, `@/*` → `src/*` path alias              |
-| Styling            | [Tailwind CSS v4](https://tailwindcss.com)                                                               | CSS-first config, no `tailwind.config.ts` needed     |
-| Components         | [shadcn/ui](https://ui.shadcn.com)                                                                       | New York style, neutral base, owned source           |
-| Data fetching      | [TanStack Query v5](https://tanstack.com/query)                                                          | With devtools, pre-wired provider                    |
-| Tables             | [TanStack Table v8](https://tanstack.com/table)                                                          | Headless, fully typed                                |
-| Forms              | [TanStack Form](https://tanstack.com/form)                                                               | Type-safe, validation-ready                          |
-| Virtualization     | [TanStack Virtual](https://tanstack.com/virtual)                                                         | Lists and grids                                      |
-| Unit tests         | [Jest](https://jestjs.io) + [React Testing Library](https://testing-library.com)                         | 70% coverage threshold                               |
-| E2E tests          | [Playwright](https://playwright.dev)                                                                     | Chromium, Firefox, Safari, Mobile Chrome             |
-| Linting            | [ESLint v9](https://eslint.org)                                                                          | Flat config, Next.js + TypeScript rules              |
-| Formatting         | [Prettier v3](https://prettier.io)                                                                       | With `prettier-plugin-tailwindcss` for class sorting |
-| Git hooks          | [Husky v9](https://typicode.github.io/husky) + [lint-staged](https://github.com/lint-staged/lint-staged) | Lint/format on commit                                |
-| Commits            | [Commitizen](https://commitizen-tools.github.io/commitizen/) + [Commitlint](https://commitlint.js.org)   | Conventional Commits enforced                        |
-| Dependency updates | [Renovate](https://docs.renovatebot.com)                                                                 | Auto-merge safe updates, security alerts             |
-| CI                 | GitHub Actions                                                                                           | Type-check, lint, unit tests, E2E                    |
-| Package manager    | [pnpm](https://pnpm.io)                                                                                  |                                                      |
+| Category           | Tool                                                                                                     | Notes                                                   |
+| ------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Framework          | [Next.js 15](https://nextjs.org)                                                                         | App Router, Turbopack dev server                        |
+| Language           | [TypeScript 5](https://www.typescriptlang.org)                                                           | Strict mode, `@/*` → `src/*` path alias                 |
+| Styling            | [Tailwind CSS v4](https://tailwindcss.com)                                                               | CSS-first config, no `tailwind.config.ts` needed        |
+| Components         | [@elirobinson/react](https://github.com/EliRobinson/design-system)                                       | Design system (default); shadcn/ui as fallback for gaps |
+| Data fetching      | [TanStack Query v5](https://tanstack.com/query)                                                          | With devtools, pre-wired provider                       |
+| Tables             | [TanStack Table v8](https://tanstack.com/table)                                                          | Headless, fully typed                                   |
+| Forms              | [TanStack Form](https://tanstack.com/form)                                                               | Type-safe, validation-ready                             |
+| Virtualization     | [TanStack Virtual](https://tanstack.com/virtual)                                                         | Lists and grids                                         |
+| Unit tests         | [Jest](https://jestjs.io) + [React Testing Library](https://testing-library.com)                         | 70% coverage threshold                                  |
+| E2E tests          | [Playwright](https://playwright.dev)                                                                     | Chromium, Firefox, Safari, Mobile Chrome                |
+| Linting            | [ESLint v9](https://eslint.org)                                                                          | Flat config, Next.js + TypeScript rules                 |
+| Formatting         | [Prettier v3](https://prettier.io)                                                                       | With `prettier-plugin-tailwindcss` for class sorting    |
+| Git hooks          | [Husky v9](https://typicode.github.io/husky) + [lint-staged](https://github.com/lint-staged/lint-staged) | Lint/format on commit                                   |
+| Commits            | [Commitizen](https://commitizen-tools.github.io/commitizen/) + [Commitlint](https://commitlint.js.org)   | Conventional Commits enforced                           |
+| Dependency updates | [Renovate](https://docs.renovatebot.com)                                                                 | Auto-merge safe updates, security alerts                |
+| CI                 | GitHub Actions                                                                                           | Type-check, lint, unit tests, E2E                       |
+| Package manager    | [pnpm](https://pnpm.io)                                                                                  |                                                         |
 
 ---
 
@@ -67,9 +67,9 @@ Open [http://localhost:3000](http://localhost:3000).
 │   ├── app/                  # Next.js App Router
 │   │   ├── layout.tsx        # Root layout (fonts, providers)
 │   │   ├── page.tsx          # Home page
-│   │   └── globals.css       # Tailwind + shadcn CSS variables
+│   │   └── globals.css       # Tailwind CSS variables
 │   ├── components/
-│   │   ├── ui/               # shadcn/ui components (owned, editable)
+│   │   ├── ui/               # shadcn/ui components (fallback, owned, editable)
 │   │   └── providers.tsx     # TanStack Query provider + devtools
 │   ├── hooks/                # Custom React hooks
 │   ├── lib/
@@ -82,14 +82,32 @@ Open [http://localhost:3000](http://localhost:3000).
 │   └── workflows/ci.yml      # CI pipeline
 ├── .husky/                   # Git hooks
 ├── AGENTS.md                 # AI agent guide (CLAUDE.md symlinks here)
-└── components.json           # shadcn/ui config
+├── .npmrc                    # @elirobinson scope → GitHub Packages registry
+└── components.json           # shadcn/ui config (fallback)
 ```
 
 ---
 
 ## Common tasks
 
-### Add a shadcn component
+### Use a design system component
+
+```tsx
+import { Button } from "@elirobinson/react/components/Button";
+```
+
+`@elirobinson/react` ([source](https://github.com/EliRobinson/design-system)) is the default component source — check its inventory before adding shadcn or hand-rolling anything. Tokens (`@elirobinson/tokens/tokens.css`) and component styles (`@elirobinson/react/styles.css`) are already imported in `src/app/layout.tsx`.
+
+Installing/updating requires a GitHub PAT with `read:packages` exported as `NODE_AUTH_TOKEN` (the repo's `.npmrc` points the `@elirobinson` scope at `npm.pkg.github.com`):
+
+```bash
+export NODE_AUTH_TOKEN=<your-github-pat>
+pnpm add @elirobinson/tokens@latest @elirobinson/react@latest
+```
+
+### Add a shadcn component (fallback)
+
+Only when the design system doesn't cover what you need:
 
 ```bash
 pnpm dlx shadcn@latest add dialog
