@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@elirobinson/react':
+        specifier: ^0.4.0
+        version: 0.4.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@elirobinson/tokens':
+        specifier: ^0.2.0
+        version: 0.2.0
       '@t3-oss/env-nextjs':
         specifier: ^0.11.1
         version: 0.11.1(typescript@5.9.3)(zod@3.25.76)
@@ -387,6 +393,15 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@elirobinson/react@0.4.0':
+    resolution: {integrity: sha512-ninDn9FHlUSK4Pn29mtHm46tdSj+1RSZ7bziKxBF9YDhFk1CSwaBL1Y3J3z25GSkdfg1D8taw9+tQLBVwl8X1A==, tarball: https://npm.pkg.github.com/download/@elirobinson/react/0.4.0/b9f16f4a5409160bb05b5f9f16c96a477085a285}
+    peerDependencies:
+      react: ^19.0.0
+      react-dom: ^19.0.0
+
+  '@elirobinson/tokens@0.2.0':
+    resolution: {integrity: sha512-EC29zQuMefI/TuXte6cDwedxm5P7eorYE95gO70AlZcBOAimi8XFTup6RzUB5oAs3kiG21U2CDysts51Jhk2Yg==, tarball: https://npm.pkg.github.com/download/@elirobinson/tokens/0.2.0/89a4de0b3c762227b99d452448d6ba4a3daf1251}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -5466,6 +5481,14 @@ snapshots:
   '@csstools/css-tokenizer@3.0.4': {}
 
   '@drizzle-team/brocli@0.10.2': {}
+
+  '@elirobinson/react@0.4.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@elirobinson/tokens': 0.2.0
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+
+  '@elirobinson/tokens@0.2.0': {}
 
   '@emnapi/core@1.10.0':
     dependencies:
