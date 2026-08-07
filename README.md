@@ -33,20 +33,24 @@ A production-ready Next.js 15 starter. Clone it, rename it, ship it.
 - Node.js ≥ 18 (22 recommended — see `.nvmrc`)
 - pnpm 9: `npm i -g pnpm`
 
-### 1. Clone and install
+### 1. Clone and configure environment variables
 
 ```bash
 git clone https://github.com/EliRobinson/next-template.git my-app
 cd my-app
 nvm use        # or: node --version should be ≥ 18
-pnpm install
+cp .env.example .env.local
+# fill in values as needed, including NODE_AUTH_TOKEN (a GitHub PAT with
+# read:packages) so pnpm can install @elirobinson/tokens and @elirobinson/react
 ```
 
-### 2. Set up environment variables
+### 2. Install dependencies
+
+`.env.local` isn't auto-loaded by pnpm/npm — export it into your shell first:
 
 ```bash
-cp .env.example .env.local
-# fill in values as needed
+export $(grep -v '^#' .env.local | xargs)
+pnpm install
 ```
 
 ### 3. Start the dev server
