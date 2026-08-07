@@ -1,15 +1,15 @@
-import type { NextConfig } from 'next';
+import type { NextConfig } from 'next'
 
 // Validate env vars at build time (fails fast instead of at runtime in prod).
-import './src/env';
+import './src/env'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
   images: {
-    formats: ['image/avif', 'image/webp'],
-  },
-};
+    formats: ['image/avif', 'image/webp']
+  }
+}
 
-export default nextConfig;
+export default nextConfig

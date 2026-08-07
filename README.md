@@ -4,25 +4,25 @@ A production-ready Next.js 15 starter. Clone it, rename it, ship it.
 
 ## What's included
 
-| Category           | Tool                                                                                                     | Notes                                                   |
-| ------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Framework          | [Next.js 15](https://nextjs.org)                                                                         | App Router, Turbopack dev server                        |
-| Language           | [TypeScript 5](https://www.typescriptlang.org)                                                           | Strict mode, `@/*` → `src/*` path alias                 |
-| Styling            | [Tailwind CSS v4](https://tailwindcss.com)                                                               | CSS-first config, no `tailwind.config.ts` needed        |
-| Components         | [@elirobinson/react](https://github.com/EliRobinson/design-system)                                       | Design system (default); shadcn/ui as fallback for gaps |
-| Data fetching      | [TanStack Query v5](https://tanstack.com/query)                                                          | With devtools, pre-wired provider                       |
-| Tables             | [TanStack Table v8](https://tanstack.com/table)                                                          | Headless, fully typed                                   |
-| Forms              | [TanStack Form](https://tanstack.com/form)                                                               | Type-safe, validation-ready                             |
-| Virtualization     | [TanStack Virtual](https://tanstack.com/virtual)                                                         | Lists and grids                                         |
-| Unit tests         | [Jest](https://jestjs.io) + [React Testing Library](https://testing-library.com)                         | 70% coverage threshold                                  |
-| E2E tests          | [Playwright](https://playwright.dev)                                                                     | Chromium, Firefox, Safari, Mobile Chrome                |
-| Linting            | [ESLint v9](https://eslint.org)                                                                          | Flat config, Next.js + TypeScript rules                 |
-| Formatting         | [Prettier v3](https://prettier.io)                                                                       | With `prettier-plugin-tailwindcss` for class sorting    |
-| Git hooks          | [Husky v9](https://typicode.github.io/husky) + [lint-staged](https://github.com/lint-staged/lint-staged) | Lint/format on commit                                   |
-| Commits            | [Commitizen](https://commitizen-tools.github.io/commitizen/) + [Commitlint](https://commitlint.js.org)   | Conventional Commits enforced                           |
-| Dependency updates | [Renovate](https://docs.renovatebot.com)                                                                 | Auto-merge safe updates, security alerts                |
-| CI                 | GitHub Actions                                                                                           | Type-check, lint, unit tests, E2E                       |
-| Package manager    | [pnpm](https://pnpm.io)                                                                                  |                                                         |
+| Category           | Tool                                                                                                     | Notes                                                                                                 |
+| ------------------ | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Framework          | [Next.js 15](https://nextjs.org)                                                                         | App Router, Turbopack dev server                                                                      |
+| Language           | [TypeScript 5](https://www.typescriptlang.org)                                                           | Strict mode, `@/*` → `src/*` path alias                                                               |
+| Styling            | [Tailwind CSS v4](https://tailwindcss.com)                                                               | CSS-first config, no `tailwind.config.ts` needed                                                      |
+| Components         | [@elirobinson/react](https://github.com/EliRobinson/design-system)                                       | Design system (default); shadcn/ui as fallback for gaps                                               |
+| Data fetching      | [TanStack Query v5](https://tanstack.com/query)                                                          | With devtools, pre-wired provider                                                                     |
+| Tables             | [TanStack Table v8](https://tanstack.com/table)                                                          | Headless, fully typed                                                                                 |
+| Forms              | [TanStack Form](https://tanstack.com/form)                                                               | Type-safe, validation-ready                                                                           |
+| Virtualization     | [TanStack Virtual](https://tanstack.com/virtual)                                                         | Lists and grids                                                                                       |
+| Unit tests         | [Jest](https://jestjs.io) + [React Testing Library](https://testing-library.com)                         | 70% coverage threshold                                                                                |
+| E2E tests          | [Playwright](https://playwright.dev)                                                                     | Chromium, Firefox, Safari, Mobile Chrome                                                              |
+| Linting            | [ESLint v9](https://eslint.org)                                                                          | Flat config, Next.js rules + [`neostandard`](https://github.com/neostandard/neostandard) (StandardJS) |
+| Formatting         | [Prettier v3](https://prettier.io)                                                                       | `prettier-config-standard` + `prettier-plugin-tailwindcss` for class sorting                          |
+| Git hooks          | [Husky v9](https://typicode.github.io/husky) + [lint-staged](https://github.com/lint-staged/lint-staged) | Lint/format on commit                                                                                 |
+| Commits            | [Commitizen](https://commitizen-tools.github.io/commitizen/) + [Commitlint](https://commitlint.js.org)   | Conventional Commits enforced                                                                         |
+| Dependency updates | [Renovate](https://docs.renovatebot.com)                                                                 | Auto-merge safe updates, security alerts                                                              |
+| CI                 | GitHub Actions                                                                                           | Type-check, lint, unit tests, E2E                                                                     |
+| Package manager    | [pnpm](https://pnpm.io)                                                                                  |                                                                                                       |
 
 ---
 
@@ -97,7 +97,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Use a design system component
 
 ```tsx
-import { Button } from '@elirobinson/react/components/Button';
+import { Button } from '@elirobinson/react/components/Button'
 ```
 
 `@elirobinson/react` ([source](https://github.com/EliRobinson/design-system)) is the default component source — check its inventory before adding shadcn or hand-rolling anything. Tokens (`@elirobinson/tokens/tokens.css`) and component styles (`@elirobinson/react/styles.css`) are already imported in `src/app/layout.tsx`.
@@ -125,15 +125,15 @@ Components land in `src/components/ui/` as owned source — edit them freely. Se
 Create a file in `tests/unit/` ending in `.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react';
-import { MyComponent } from '@/components/my-component';
+import { render, screen } from '@testing-library/react'
+import { MyComponent } from '@/components/my-component'
 
 describe('MyComponent', () => {
   it('renders the title', () => {
-    render(<MyComponent title="Hello" />);
-    expect(screen.getByText('Hello')).toBeInTheDocument();
-  });
-});
+    render(<MyComponent title='Hello' />)
+    expect(screen.getByText('Hello')).toBeInTheDocument()
+  })
+})
 ```
 
 Run tests:
@@ -149,12 +149,12 @@ pnpm test:coverage   # with coverage report
 Create a file in `e2e/` ending in `.spec.ts`:
 
 ```ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
 
 test('home page loads', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('heading')).toBeVisible();
-});
+  await page.goto('/')
+  await expect(page.getByRole('heading')).toBeVisible()
+})
 ```
 
 Run E2E tests (starts dev server automatically):

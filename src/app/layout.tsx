@@ -1,41 +1,41 @@
-import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
-import { Geist, Geist_Mono } from 'next/font/google';
-import { Providers } from '@/components/providers';
-import '@elirobinson/tokens/tokens.css';
-import '@elirobinson/react/styles.css';
-import './globals.css';
+import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
+import { Geist, Geist_Mono as GeistMono } from 'next/font/google'
+import { Providers } from '@/components/providers'
+import '@elirobinson/tokens/tokens.css'
+import '@elirobinson/react/styles.css'
+import './globals.css'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
+  subsets: ['latin']
+})
 
-const geistMono = Geist_Mono({
+const geistMono = GeistMono({
   variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+  subsets: ['latin']
+})
 
 export const metadata: Metadata = {
   title: {
     template: '%s | Next Template',
-    default: 'Next Template',
+    default: 'Next Template'
   },
-  description: 'A production-ready Next.js starter template.',
-};
+  description: 'A production-ready Next.js starter template.'
+}
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
-  children: ReactNode;
+  children: ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang='en'>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>{children}</Providers>
       </body>
     </html>
-  );
+  )
 }

@@ -1,7 +1,7 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
-const PORT = 3000;
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
+const PORT = 3000
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './e2e',
@@ -13,30 +13,30 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
+    screenshot: 'only-on-failure'
   },
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'] }
     },
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: { ...devices['Desktop Firefox'] }
     },
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: { ...devices['Desktop Safari'] }
     },
     {
       name: 'mobile-chrome',
-      use: { ...devices['Pixel 5'] },
-    },
+      use: { ...devices['Pixel 5'] }
+    }
   ],
   webServer: {
     command: 'pnpm build && pnpm start',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
-});
+    timeout: 120_000
+  }
+})

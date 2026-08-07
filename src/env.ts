@@ -1,5 +1,5 @@
-import { createEnv } from '@t3-oss/env-nextjs';
-import { z } from 'zod';
+import { createEnv } from '@t3-oss/env-nextjs'
+import { z } from 'zod'
 
 /**
  * Type-safe, validated environment variables.
@@ -13,7 +13,7 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
-    DATABASE_URL: z.string().url().optional(),
+    DATABASE_URL: z.string().url().optional()
   },
   client: {
     // Prefix any browser-exposed vars with NEXT_PUBLIC_ and list them here.
@@ -22,5 +22,5 @@ export const env = createEnv({
   experimental__runtimeEnv: {
     // NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION,
-});
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION
+})

@@ -1,14 +1,15 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { FlatCompat } from '@eslint/eslintrc';
-import prettierConfig from 'eslint-config-prettier';
+import { dirname } from 'path'
+import { fileURLToPath } from 'url'
+import { FlatCompat } from '@eslint/eslintrc'
+import prettierConfig from 'eslint-config-prettier'
+import neostandard from 'neostandard'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+  baseDirectory: __dirname
+})
 
 /** @type {import("eslint").Linter.Config[]} */
 const eslintConfig = [
@@ -20,26 +21,31 @@ const eslintConfig = [
       'out/**',
       'build/**',
       'dist/**',
-      'coverage/**',
-    ],
+      'coverage/**'
+    ]
   },
+  // Standard JS style rules, deferring formatting to Prettier.
+  // TypeScript linting is left to next/typescript below — neostandard's
+  // own `ts: true` registers a second @typescript-eslint plugin instance
+  // that conflicts with the one next/typescript registers.
+  ...neostandard({ noStyle: true }),
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/consistent-type-imports': [
         'error',
-        { prefer: 'type-imports' },
+        { prefer: 'type-imports' }
       ],
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-    },
+      'no-console': ['warn', { allow: ['warn', 'error'] }]
+    }
   },
   // Prettier must be last to disable conflicting formatting rules
-  prettierConfig,
-];
+  prettierConfig
+]
 
-export default eslintConfig;
+export default eslintConfig
