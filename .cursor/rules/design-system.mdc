@@ -6,26 +6,30 @@ alwaysApply: false
 
 # Design system first
 
-UI in this repo comes from **`@elirobinson/react`** (components, hooks) and **`@elirobinson/tokens`** (color, type, space, radius, shadow, motion). No other component library. No hardcoded design values.
+UI in this repo comes from **`@elirobinson/react`** (components, hooks), **`@elirobinson/tokens`** (color, type, space, radius, shadow, motion), and **`@elirobinson/ai-patterns`** (UI contracts and working patterns). No other component library. No hardcoded design values.
 
 Full guide: `docs/design-system.md` · Upstream: https://github.com/EliRobinson/design-system
 
 ## Discover before you build
 
-Never rely on a remembered or documented component list — it goes stale on every design system release. Ask the installed package:
+Never rely on a remembered or documented component list — it goes stale on every design system release. Ask the installed packages:
 
 ```bash
 pnpm ds                  # components (+ exports & variants), hooks, typography classes, token groups
-pnpm ds props <Name>     # props and variant unions for one component
+pnpm ds props <Name>     # props and variant unions; accepts `Card` or `molecules/Card`
 pnpm ds tokens [filter]  # tokens and values
 pnpm ds classes [filter] # CSS classes the design system ships
+pnpm ds contracts        # machine-checkable UI rules you must satisfy
+pnpm ds patterns         # working principles
+pnpm ds prompts [name]   # prompt templates: add-component, audit-page, adopt-system
 ```
 
-Deeper detail: `node_modules/@elirobinson/react/src/components/<Name>.tsx`, `node_modules/@elirobinson/tokens/src/tokens.css`.
+Deeper detail: `node_modules/@elirobinson/react/src/components/<tier>/<Name>.tsx`, `node_modules/@elirobinson/tokens/src/tokens.css`, `node_modules/@elirobinson/ai-patterns/src/contracts.json`.
 
 ## Rules
 
-- Import per component: `import { Button } from '@elirobinson/react/components/Button'`. No barrel export.
+- Import per component, full subpath: `import { Button } from '@elirobinson/react/components/atoms/Button'`. Components live under `atoms`/`molecules`/`organisms`; there is no barrel export and a bare package import does not resolve.
+- Satisfy `pnpm ds contracts`: 44×44 touch targets on primary controls, visible focus, WCAG AA contrast, `forwardRef` on interactive components. Each constraint carries its own `check`.
 - Use each component's `variant` / `size` props rather than overriding its look with utilities.
 - Tailwind utilities are for layout (grid, flex, spacing); the design system owns appearance.
 - Colors, radii, shadows, durations, font sizes come from tokens — via utilities (`bg-background`, `text-muted-foreground`, `border-border`, `text-accent`), `.t-*` typography classes, or `var(--token)` in arbitrary values. Never a literal.
@@ -39,4 +43,4 @@ Deeper detail: `node_modules/@elirobinson/react/src/components/<Name>.tsx`, `nod
 2. `pnpm dlx shadcn@latest add <component>` → `src/components/ui/`, restyled with tokens. Gap-filler only.
 3. Hand-roll from tokens as a last resort, and flag it as a design system gap worth upstreaming.
 
-MUI, Chakra, Ant Design, Mantine, HeroUI, Headless UI, DaisyUI and direct Radix imports (outside `src/components/ui/`) are blocked by ESLint. Don't work around it.
+MUI, Chakra, Ant Design, Mantine, HeroUI, Headless UI, DaisyUI, direct Radix imports (outside `src/components/ui/`), and bare `@elirobinson/*` imports are blocked by ESLint. Don't work around it.

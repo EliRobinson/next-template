@@ -33,10 +33,22 @@ const FOREIGN_UI_LIBRARIES = {
     'Use @elirobinson/react instead (run `pnpm ds` for the inventory). shadcn/ui in src/components/ui/ is the only sanctioned fallback.'
 }
 
+// The `no-barrel-imports` contract from @elirobinson/ai-patterns: the packages
+// ship no barrel files, so a bare specifier does not resolve. Run
+// `pnpm ds contracts` for the full set of constraints agents must satisfy.
+const DESIGN_SYSTEM_BARRELS = [
+  '@elirobinson/react',
+  '@elirobinson/tokens',
+  '@elirobinson/ai-patterns'
+].map((name) => ({
+  name,
+  message: `${name} has no barrel export — import a subpath instead, e.g. @elirobinson/react/components/atoms/Button. Run \`pnpm ds\` for the inventory.`
+}))
+
 const DIRECT_PRIMITIVES = {
   group: ['@radix-ui/*', 'radix-ui', 'radix-ui/*'],
   message:
-    'The design system already wraps these primitives — import from @elirobinson/react/components/<Name>. Direct Radix use is allowed only inside src/components/ui/ (shadcn output).'
+    'The design system already wraps these primitives — import from @elirobinson/react instead (run `pnpm ds` for the inventory and subpaths). Direct Radix use is allowed only inside src/components/ui/ (shadcn output).'
 }
 
 /** @type {import("eslint").Linter.Config[]} */
@@ -72,7 +84,10 @@ const eslintConfig = [
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-restricted-imports': [
         'error',
-        { patterns: [FOREIGN_UI_LIBRARIES, DIRECT_PRIMITIVES] }
+        {
+          paths: DESIGN_SYSTEM_BARRELS,
+          patterns: [FOREIGN_UI_LIBRARIES, DIRECT_PRIMITIVES]
+        }
       ]
     }
   },
@@ -81,7 +96,10 @@ const eslintConfig = [
   {
     files: ['src/components/ui/**'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [FOREIGN_UI_LIBRARIES] }]
+      'no-restricted-imports': [
+        'error',
+        { paths: DESIGN_SYSTEM_BARRELS, patterns: [FOREIGN_UI_LIBRARIES] }
+      ]
     }
   },
   {

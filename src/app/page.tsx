@@ -1,5 +1,5 @@
-import { Card, CardContent } from '@elirobinson/react/components/Card'
-import { Eyebrow } from '@elirobinson/react/components/Eyebrow'
+import { Card, CardContent } from '@elirobinson/react/components/molecules/Card'
+import { Eyebrow } from '@elirobinson/react/components/atoms/Eyebrow'
 
 export default function Home() {
   return (

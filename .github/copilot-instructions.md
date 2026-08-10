@@ -4,15 +4,16 @@ Next.js 15 (App Router) + TypeScript strict + Tailwind CSS v4 + pnpm. Full conve
 
 ## UI: design system first
 
-All UI is built from **`@elirobinson/react`** (components, hooks) and **`@elirobinson/tokens`** (color, type, space, radius, shadow, motion). These are the primary source of components, tokens, and design patterns — see [`docs/design-system.md`](../docs/design-system.md) and the upstream [design system](https://github.com/EliRobinson/design-system).
+All UI is built from **`@elirobinson/react`** (components, hooks), **`@elirobinson/tokens`** (color, type, space, radius, shadow, motion), and **`@elirobinson/ai-patterns`** (UI contracts, working patterns, prompt templates). These are the primary source of components, tokens, and design patterns — see [`docs/design-system.md`](../docs/design-system.md) and the upstream [design system](https://github.com/EliRobinson/design-system).
 
-- Discover what exists with `pnpm ds` (also `pnpm ds props <Name>`, `pnpm ds tokens [filter]`, `pnpm ds classes`). It reads `node_modules` at run time, so it is never stale — do not trust a component list from memory or from a doc.
-- Import per component: `import { Button } from '@elirobinson/react/components/Button'`. There is no barrel export.
+- Discover what exists with `pnpm ds` (also `pnpm ds props <Name>`, `pnpm ds tokens [filter]`, `pnpm ds classes`, `pnpm ds contracts`, `pnpm ds patterns`, `pnpm ds prompts`). It reads `node_modules` at run time, so it is never stale — do not trust a component list from memory or from a doc.
+- Import per component with the full subpath: `import { Button } from '@elirobinson/react/components/atoms/Button'`. Components live under `atoms`/`molecules`/`organisms`; there is no barrel export and a bare package import does not resolve.
+- Satisfy the contracts from `pnpm ds contracts`: 44×44 touch targets on primary controls, visible focus, WCAG AA contrast, `forwardRef` on interactive components.
 - Style with the component's own `variant` / `size` props; use Tailwind utilities for layout only.
 - Colors, radii, shadows, durations, and font sizes come from tokens: token-backed utilities (`bg-background`, `text-muted-foreground`, `border-border`, `text-accent`), `.t-*` typography classes, or `var(--token)` in arbitrary values. Never hardcode a literal.
 - Dark mode is `[data-theme="dark"]`, not `.dark`.
 - Missing a piece? Compose it from primitives → then shadcn/ui into `src/components/ui/` → then hand-roll from tokens and flag it as a design system gap.
-- Other component libraries (MUI, Chakra, Ant Design, Mantine, HeroUI, Headless UI, DaisyUI) and direct Radix imports outside `src/components/ui/` are blocked by ESLint.
+- Other component libraries (MUI, Chakra, Ant Design, Mantine, HeroUI, Headless UI, DaisyUI), direct Radix imports outside `src/components/ui/`, and bare `@elirobinson/*` imports are blocked by ESLint.
 
 ## Everything else
 

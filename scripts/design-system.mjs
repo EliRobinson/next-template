@@ -2,14 +2,16 @@
 
 // Prints a live inventory of the installed @elirobinson design system.
 // Everything is read from node_modules at run time, so this never goes stale:
-// bumping @elirobinson/react or @elirobinson/tokens is the only update needed.
+// bumping @elirobinson/react, /tokens or /ai-patterns is the only update needed.
+// Component discovery is layout-agnostic — flat or tiered directories both work.
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const REACT_PKG = '@elirobinson/react'
 const TOKENS_PKG = '@elirobinson/tokens'
+const PATTERNS_PKG = '@elirobinson/ai-patterns'
 
 function findPackageDir(name) {
   let dir = dirname(fileURLToPath(import.meta.url))
@@ -27,16 +29,39 @@ function readFile(path) {
 }
 
 function version(pkgDir) {
-  const manifest = readFile(join(pkgDir, 'package.json'))
-  return manifest ? JSON.parse(manifest).version : 'unknown'
+  const manifest = pkgDir && readFile(join(pkgDir, 'package.json'))
+  return manifest ? JSON.parse(manifest).version : null
 }
 
-function moduleNames(dir) {
+function walk(dir, extension) {
   if (!existsSync(dir)) return []
-  return readdirSync(dir)
-    .filter((file) => file.endsWith('.d.ts'))
-    .map((file) => file.replace(/\.d\.ts$/, ''))
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) return walk(path, extension)
+    return entry.name.endsWith(extension) ? [path] : []
+  })
+}
+
+// Subpaths relative to the module root, e.g. 'Button' or 'atoms/Button'.
+// Import specifier is always `<pkg>/<kind>/<subpath>`, whatever the layout.
+function moduleSubpaths(root) {
+  return walk(root, '.d.ts')
+    .map((path) =>
+      relative(root, path)
+        .replace(/\.d\.ts$/, '')
+        .split(sep)
+        .join('/')
+    )
     .sort()
+}
+
+function tierOf(subpath) {
+  const segments = subpath.split('/')
+  return segments.length > 1 ? segments.slice(0, -1).join('/') : ''
+}
+
+function baseNameOf(subpath) {
+  return subpath.split('/').pop()
 }
 
 function valueExports(declaration) {
@@ -84,10 +109,14 @@ function group(items, keyOf) {
 
 const reactDir = findPackageDir(REACT_PKG)
 const tokensDir = findPackageDir(TOKENS_PKG)
+const patternsDir = findPackageDir(PATTERNS_PKG)
 
 if (!reactDir || !tokensDir) {
+  const missing = [!reactDir && REACT_PKG, !tokensDir && TOKENS_PKG]
+    .filter(Boolean)
+    .join(', ')
   console.error(
-    `Design system not installed. Run:\n\n  export NODE_AUTH_TOKEN=<github-pat-with-read:packages>\n  pnpm install\n\nMissing: ${[!reactDir && REACT_PKG, !tokensDir && TOKENS_PKG].filter(Boolean).join(', ')}`
+    `Design system not installed (missing: ${missing}).\n\n  export NODE_AUTH_TOKEN=<github-pat-with-read:packages>\n  pnpm install`
   )
   process.exit(1)
 }
@@ -96,11 +125,13 @@ const componentsDir = join(reactDir, 'dist', 'components')
 const hooksDir = join(reactDir, 'dist', 'hooks')
 const componentSrcDir = join(reactDir, 'src', 'components')
 const tokensCss = readFile(join(tokensDir, 'src', 'tokens.css'))
-const stylesCss = readFile(join(reactDir, 'src', 'styles.css'))
+const componentCss = walk(join(reactDir, 'src'), '.css')
+  .map((path) => readFile(path))
+  .join('\n')
 
 const [command = 'list', ...args] = process.argv.slice(2)
 
-const commands = { list, tokens, classes, props }
+const commands = { list, tokens, classes, props, patterns, contracts, prompts }
 
 if (!commands[command]) {
   // Bare `pnpm ds Button` is treated as `pnpm ds props Button`.
@@ -117,38 +148,59 @@ function usage() {
   props <Name>      Full prop/variant types for one component
   tokens [filter]   Design tokens (CSS custom properties)
   classes [filter]  CSS classes shipped by the design system
+  patterns          AI product patterns (${PATTERNS_PKG})
+  contracts         Machine-checkable UI contracts agents must satisfy
+  prompts [name]    Reusable prompt templates
 
 Shorthand: pnpm ds Button === pnpm ds props Button`)
   process.exit(1)
 }
 
-function list() {
-  console.log(
-    `${REACT_PKG}@${version(reactDir)}  ${TOKENS_PKG}@${version(tokensDir)}`
+function requirePatterns() {
+  if (patternsDir) return patternsDir
+  console.error(
+    `${PATTERNS_PKG} is not installed.\n\n  export NODE_AUTH_TOKEN=<github-pat-with-read:packages>\n  pnpm add -D ${PATTERNS_PKG}@latest`
   )
+  process.exit(1)
+}
+
+function list() {
+  const installed = [
+    `${REACT_PKG}@${version(reactDir)}`,
+    `${TOKENS_PKG}@${version(tokensDir)}`,
+    patternsDir
+      ? `${PATTERNS_PKG}@${version(patternsDir)}`
+      : `${PATTERNS_PKG} (not installed)`
+  ]
+  console.log(installed.join('  '))
   console.log('Source of truth: https://github.com/EliRobinson/design-system\n')
 
+  const subpaths = moduleSubpaths(componentsDir)
   console.log(
-    "COMPONENTS  import { X } from '@elirobinson/react/components/<Name>'"
+    `COMPONENTS (${subpaths.length})  import { X } from '${REACT_PKG}/components/<subpath>'`
   )
-  for (const name of moduleNames(componentsDir)) {
-    const declaration = readFile(join(componentsDir, `${name}.d.ts`)) ?? ''
-    const exported = valueExports(declaration)
-    const variants = unionTypes(declaration)
-      .map(
-        ({ name: type, values }) =>
-          `${type.replace(name, '').toLowerCase()}: ${values.join('|')}`
+  for (const [tier, members] of group(subpaths, tierOf)) {
+    if (tier) console.log(`\n  ${tier}/`)
+    for (const subpath of members) {
+      const declaration = readFile(join(componentsDir, `${subpath}.d.ts`)) ?? ''
+      const name = baseNameOf(subpath)
+      const variants = unionTypes(declaration)
+        .map(
+          ({ name: type, values }) =>
+            `${type.replace(name, '').toLowerCase()}: ${values.join('|')}`
+        )
+        .join('  ')
+      console.log(
+        `    ${name.padEnd(16)} ${valueExports(declaration).join(', ')}`
       )
-      .join('  ')
-    console.log(
-      `  ${name.padEnd(14)} ${exported.join(', ')}${variants ? `\n  ${''.padEnd(14)} ${variants}` : ''}`
-    )
+      if (variants) console.log(`    ${''.padEnd(16)} ${variants}`)
+    }
   }
 
-  const hooks = moduleNames(hooksDir)
+  const hooks = moduleSubpaths(hooksDir)
   if (hooks.length) {
-    console.log("\nHOOKS  import { x } from '@elirobinson/react/hooks/<name>'")
-    for (const name of hooks) console.log(`  ${name}`)
+    console.log(`\nHOOKS  import { x } from '${REACT_PKG}/hooks/<name>'`)
+    console.log(`  ${hooks.join('  ')}`)
   }
 
   const typography = cssClasses(tokensCss)
@@ -168,6 +220,12 @@ function list() {
     console.log(`  groups: ${[...prefixes.keys()].slice(0, 24).join(', ')}`)
   }
 
+  if (patternsDir) {
+    console.log(
+      '\nAI PATTERNS  `pnpm ds patterns`, `pnpm ds contracts`, `pnpm ds prompts`'
+    )
+  }
+
   console.log(
     '\nNext: `pnpm ds props <Name>` for props, `pnpm ds tokens color` for values.'
   )
@@ -175,15 +233,22 @@ function list() {
 
 function props(name) {
   if (!name) usage()
-  const declaration = readFile(join(componentsDir, `${name}.d.ts`))
-  if (!declaration) {
-    const available = moduleNames(componentsDir).join(', ')
-    console.error(`No component named "${name}".\n\nAvailable: ${available}`)
+  const subpaths = moduleSubpaths(componentsDir)
+  const match =
+    subpaths.find((subpath) => subpath === name) ??
+    subpaths.find((subpath) => baseNameOf(subpath) === name)
+  if (!match) {
+    console.error(
+      `No component named "${name}".\n\nAvailable: ${subpaths.join(', ')}`
+    )
     process.exit(1)
   }
-  console.log(`// ${REACT_PKG}/components/${name} (v${version(reactDir)})`)
+  const declaration = readFile(join(componentsDir, `${match}.d.ts`))
+  console.log(
+    `// import from '${REACT_PKG}/components/${match}' (v${version(reactDir)})`
+  )
   console.log(declaration.replace(/\/\/# sourceMappingURL.*\n?/, '').trim())
-  const source = join(componentSrcDir, `${name}.tsx`)
+  const source = join(componentSrcDir, `${match}.tsx`)
   if (existsSync(source)) console.log(`\n// Implementation: ${source}`)
 }
 
@@ -201,12 +266,12 @@ function tokens(filter) {
     console.log(`  ${name.padEnd(width)}  ${value}`)
   }
   console.log(
-    `\nUse as var(--token) or Tailwind arbitrary values: text-[var(--fg-2)]`
+    '\nUse as var(--token) or Tailwind arbitrary values: text-[var(--fg-2)]'
   )
 }
 
 function classes(filter) {
-  const all = [...cssClasses(tokensCss), ...cssClasses(stylesCss)].filter(
+  const all = [...cssClasses(tokensCss), ...cssClasses(componentCss)].filter(
     (name) => !filter || name.includes(filter)
   )
   if (!all.length) {
@@ -217,6 +282,52 @@ function classes(filter) {
     all,
     (name) => name.split('__')[0].split('--')[0]
   )) {
-    console.log(`  ${prefix.padEnd(20)} ${names.join(' ')}`)
+    console.log(`  ${prefix.padEnd(24)} ${[...new Set(names)].join(' ')}`)
   }
+}
+
+function patterns() {
+  console.log(readFile(join(requirePatterns(), 'src', 'patterns.md')).trim())
+}
+
+function contracts() {
+  const raw = readFile(join(requirePatterns(), 'src', 'contracts.json'))
+  const { componentConstraints = {}, ...rest } = JSON.parse(raw)
+  for (const [section, body] of Object.entries(rest)) {
+    console.log(`${section.toUpperCase()}`)
+    for (const [key, value] of Object.entries(body)) {
+      console.log(
+        `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`
+      )
+    }
+    console.log('')
+  }
+  console.log('COMPONENT CONSTRAINTS  every one of these must hold')
+  for (const [name, { summary, check }] of Object.entries(
+    componentConstraints
+  )) {
+    console.log(`\n  ${name}\n    ${summary}\n    check: ${check}`)
+  }
+}
+
+function prompts(name) {
+  const dir = join(requirePatterns(), 'src', 'prompts')
+  const available = walk(dir, '.md').map((path) => relative(dir, path))
+  if (!name) {
+    console.log(`Prompt templates in ${PATTERNS_PKG}:\n`)
+    for (const file of available) {
+      console.log(
+        `  ${file.replace(/\.md$/, '').padEnd(20)} pnpm ds prompts ${file.replace(/\.md$/, '')}`
+      )
+    }
+    return
+  }
+  const file = available.find((entry) => entry.replace(/\.md$/, '') === name)
+  if (!file) {
+    console.error(
+      `No prompt named "${name}".\n\nAvailable: ${available.map((entry) => entry.replace(/\.md$/, '')).join(', ')}`
+    )
+    process.exit(1)
+  }
+  console.log(readFile(join(dir, file)).trim())
 }
