@@ -208,16 +208,16 @@ pnpm commit
 Or write directly — commitlint enforces the format on every `git commit`:
 
 ```
-<type>(<optional scope>): <lowercase subject>
+<type>(<optional scope>): <subject>
 
 feat: add user profile page
 fix: correct token expiry calculation
-docs: update api usage examples
+docs: update API usage examples
 ```
 
 **Types:** `feat` `fix` `docs` `style` `refactor` `perf` `test` `build` `ci` `chore` `revert`
 
-The subject must be lowercase. Breaking changes: use `feat!:` and add a `BREAKING CHANGE:` footer.
+Subject casing is not enforced — acronyms and proper nouns can stay capitalized. Breaking changes: use `feat!:` and add a `BREAKING CHANGE:` footer.
 
 ### Run all quality checks
 

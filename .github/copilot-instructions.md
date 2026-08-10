@@ -19,7 +19,7 @@ All UI is built from **`@elirobinson/react`** (components, hooks) and **`@elirob
 - Default to Server Components; add `"use client"` only for hooks or browser APIs.
 - TypeScript strict, `@/*` → `src/*`, type-only imports via `import type`.
 - StandardJS style enforced by ESLint + Prettier — single quotes, no semicolons, no hand-sorted Tailwind classes.
-- Conventional Commits (`feat:`, `fix:`, `docs:`…), lowercase subject.
+- Conventional Commits (`feat:`, `fix:`, `docs:`…); subject casing is not enforced.
 - Tests: Vitest + RTL in `tests/unit/`, Playwright in `e2e/`.
 - Quality gates: `pnpm type-check`, `pnpm lint`, `pnpm format:check`, `pnpm test`.
 - No `console.log` (`console.warn`/`console.error` only), no `any` without a justifying eslint-disable comment.
