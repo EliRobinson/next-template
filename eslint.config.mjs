@@ -11,6 +11,34 @@ const compat = new FlatCompat({
   baseDirectory: __dirname
 })
 
+// @elirobinson/react is the component source of truth for this template.
+// These bans keep a second UI vocabulary from creeping in; see AGENTS.md and
+// docs/design-system.md for the sourcing order.
+const FOREIGN_UI_LIBRARIES = {
+  group: [
+    '@mui/*',
+    '@material-ui/*',
+    '@chakra-ui/*',
+    '@mantine/*',
+    '@nextui-org/*',
+    '@heroui/*',
+    'antd',
+    'antd/*',
+    'react-bootstrap',
+    'react-bootstrap/*',
+    '@headlessui/*',
+    'daisyui'
+  ],
+  message:
+    'Use @elirobinson/react instead (run `pnpm ds` for the inventory). shadcn/ui in src/components/ui/ is the only sanctioned fallback.'
+}
+
+const DIRECT_PRIMITIVES = {
+  group: ['@radix-ui/*', 'radix-ui', 'radix-ui/*'],
+  message:
+    'The design system already wraps these primitives — import from @elirobinson/react/components/<Name>. Direct Radix use is allowed only inside src/components/ui/ (shadcn output).'
+}
+
 /** @type {import("eslint").Linter.Config[]} */
 const eslintConfig = [
   {
@@ -41,8 +69,24 @@ const eslintConfig = [
         'error',
         { prefer: 'type-imports' }
       ],
-      'no-console': ['warn', { allow: ['warn', 'error'] }]
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'no-restricted-imports': [
+        'error',
+        { patterns: [FOREIGN_UI_LIBRARIES, DIRECT_PRIMITIVES] }
+      ]
     }
+  },
+  // shadcn/ui components are generated against Radix primitives directly.
+  // They are the sanctioned gap-filler, so only the foreign-library ban applies.
+  {
+    files: ['src/components/ui/**'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [FOREIGN_UI_LIBRARIES] }]
+    }
+  },
+  {
+    files: ['scripts/**'],
+    rules: { 'no-console': 'off' }
   },
   // Prettier must be last to disable conflicting formatting rules
   prettierConfig
