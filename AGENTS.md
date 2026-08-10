@@ -6,15 +6,16 @@ This file is the single source of truth for AI agents and humans working in this
 
 ## Read this first: design system is the default
 
-**All UI in this project is built from the [`@elirobinson/react`](https://github.com/EliRobinson/design-system) design system and its `@elirobinson/tokens` design tokens.** Components, colors, typography, spacing, radii, shadows, and motion come from there — not from another library, and not from hardcoded values.
+**All UI in this project is built from the [design system](https://github.com/EliRobinson/design-system): `@elirobinson/react` (components, hooks), `@elirobinson/tokens` (color, type, space, radius, shadow, motion), and `@elirobinson/ai-patterns` (the contracts and working patterns agents must follow).** Nothing comes from another component library, and nothing is a hardcoded design value.
 
 Before writing or changing any UI, run:
 
 ```bash
-pnpm ds          # live inventory: components, hooks, typography classes, tokens
+pnpm ds            # live inventory: components, hooks, typography classes, tokens
+pnpm ds contracts  # machine-checkable rules your UI has to satisfy
 ```
 
-That command reads the installed package, so it is always accurate for the version in use. **Never rely on a component list written in a doc — including this one.** Full rules, discovery commands, and the escalation path when something is missing: **[docs/design-system.md](docs/design-system.md)**.
+Both read the installed packages, so they are always accurate for the versions in use — including the component directory layout, which is discovered rather than assumed. **Never rely on a component list written in a doc — including this one.** Full rules, discovery commands, and the escalation path when something is missing: **[docs/design-system.md](docs/design-system.md)**.
 
 ---
 
@@ -31,6 +32,7 @@ A production-ready **Next.js 15** starter template. Built with the App Router, T
 | Framework              | Next.js 15 (App Router, Turbopack)                                                                 |
 | Language               | TypeScript 5 (strict, `@/*` path alias → `src/*`)                                                  |
 | Components & styling   | `@elirobinson/react` + `@elirobinson/tokens` (primary) on Tailwind CSS v4; shadcn/ui as gap-filler |
+| UI contracts for AI    | `@elirobinson/ai-patterns` (`pnpm ds contracts`, `patterns`, `prompts`)                            |
 | Data fetching          | TanStack Query v5                                                                                  |
 | Tables                 | TanStack Table v8                                                                                  |
 | Forms                  | TanStack Form                                                                                      |
@@ -81,6 +83,8 @@ pnpm dev          # Start dev server (Turbopack)
 pnpm ds           # Design system inventory (run before any UI work)
 pnpm ds props X   # Props + variants for design system component X
 pnpm ds tokens    # Every design token and its value
+pnpm ds contracts # Machine-checkable UI rules from @elirobinson/ai-patterns
+pnpm ds prompts   # Reusable prompt templates (add-component, audit-page, …)
 pnpm build        # Production build
 pnpm lint         # ESLint check
 pnpm lint:fix     # ESLint auto-fix
@@ -118,7 +122,7 @@ Full guide: **[docs/design-system.md](docs/design-system.md)**. The short versio
 
 **Component sourcing priority — always in this order:**
 
-1. **`@elirobinson/react`** (the design system) — run `pnpm ds` to see what exists, then import from `@elirobinson/react/components/<Name>` and `@elirobinson/react/hooks/<name>`.
+1. **`@elirobinson/react`** (the design system) — run `pnpm ds` to see what exists, then import the subpath it prints: `@elirobinson/react/components/<tier>/<Name>`, `@elirobinson/react/hooks/<name>`. There is no barrel export; a bare package import does not resolve.
 2. **Compose from design system primitives** — most "missing" pieces (heroes, page headers, empty states, sidebars) are compositions, not new primitives.
 3. **shadcn/ui** — only for a primitive the design system genuinely doesn't cover. Add via `pnpm dlx shadcn@latest add <component>` into `src/components/ui/`, never manually. Restyle it with design system tokens.
 4. **Hand-rolled component** — last resort. Build it from tokens and flag it as a design system gap; it probably belongs upstream.
@@ -126,6 +130,7 @@ Full guide: **[docs/design-system.md](docs/design-system.md)**. The short versio
 Never reach for an unrelated external component library (MUI, Chakra, Ant Design, Mantine, Headless UI, Radix directly, etc.) — the design system already wraps the primitives this template needs. ESLint blocks these imports.
 
 - **Discover, don't guess.** `pnpm ds`, `pnpm ds props <Name>`, `pnpm ds tokens [filter]`, `pnpm ds classes [filter]` all read the installed package. Component `.d.ts` and `.tsx` sources are in `node_modules/@elirobinson/react/`.
+- **Honor the contracts.** `pnpm ds contracts` prints the `componentConstraints` and `uiContracts` from `@elirobinson/ai-patterns` — touch targets, visible focus, WCAG AA contrast, ref forwarding, subpath imports. They are requirements, and each carries its own `check`.
 - **Tokens over literals.** No hex/`oklch()` colors, no magic px for radius, shadow, or motion. Use token-backed Tailwind utilities (`bg-background`, `text-muted-foreground`, `border-border`, `text-accent`), the `.t-*` typography classes, or `var(--token)` in arbitrary values.
 - The Tailwind color layer in `src/app/globals.css` is a thin alias over `@elirobinson/tokens` — extend it by aliasing more tokens, never by hardcoding values.
 - Dark mode is `[data-theme="dark"]` (design system convention), not `.dark`. Configure `next-themes` with `attribute="data-theme"` if you add it.
@@ -193,27 +198,44 @@ Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` wil
 
 ---
 
-## Design System (`@elirobinson/react` + `@elirobinson/tokens`)
+## Design System
 
-The primary source of components, tokens, and design patterns for everything built on this template. **Full guide: [docs/design-system.md](docs/design-system.md).** Upstream Storybook and docs: [EliRobinson/design-system](https://github.com/EliRobinson/design-system).
+Three packages, one source of truth for everything visual and for how agents build it. **Full guide: [docs/design-system.md](docs/design-system.md).** Upstream Storybook and docs: [EliRobinson/design-system](https://github.com/EliRobinson/design-system).
+
+| Package                    | Provides                                                   | Dependency type |
+| -------------------------- | ---------------------------------------------------------- | --------------- |
+| `@elirobinson/react`       | Components (`atoms`/`molecules`/`organisms`) and hooks     | dependency      |
+| `@elirobinson/tokens`      | Color, type, space, radius, shadow, motion, `.t-*` classes | dependency      |
+| `@elirobinson/ai-patterns` | UI contracts, working patterns, reusable prompt templates  | devDependency   |
 
 ```tsx
-import { Button } from '@elirobinson/react/components/Button'
-import { Card, CardHeader, CardTitle } from '@elirobinson/react/components/Card'
+import { Button } from '@elirobinson/react/components/atoms/Button'
+import { Card, CardHeader } from '@elirobinson/react/components/molecules/Card'
 ```
 
 **This file deliberately does not list the components.** Inventories in docs go stale the moment the design system ships a release; the installed package never does. Ask it instead:
 
 ```bash
 pnpm ds                 # components (+ exports & variants), hooks, typography classes, token groups
-pnpm ds props Dialog    # exact props and variant unions for one component
+pnpm ds props Dialog    # props and variant unions; accepts `Dialog` or `organisms/Dialog`
 pnpm ds tokens accent   # tokens filtered by name or value
 pnpm ds classes         # every CSS class the design system ships
+pnpm ds contracts       # uiContracts + componentConstraints you must satisfy
+pnpm ds patterns        # AI product patterns (how to work, not what to import)
+pnpm ds prompts         # prompt templates: add-component, audit-page, adopt-system
 ```
 
 Layout patterns (header, footer, hero, sidebar, top bar) are documented upstream in Storybook under **Patterns** — compose them from primitives rather than expecting fixed layout components.
 
-Updating is the only maintenance this template needs — no doc edits: `pnpm add @elirobinson/tokens@latest @elirobinson/react@latest` (requires `NODE_AUTH_TOKEN`, see [Environment Variables](#environment-variables)), then `pnpm ds` to see what's new. New tokens flow into the Tailwind aliases in `src/app/globals.css` automatically.
+Updating is the only maintenance this template needs — no doc edits, even when the package reorganises itself (`pnpm ds` discovers the layout):
+
+```bash
+pnpm add @elirobinson/tokens@latest @elirobinson/react@latest
+pnpm add -D @elirobinson/ai-patterns@latest
+pnpm ds
+```
+
+Requires `NODE_AUTH_TOKEN` — see [Environment Variables](#environment-variables). New tokens flow into the Tailwind aliases in `src/app/globals.css` automatically.
 
 ### Adding shadcn Components (fallback only)
 
@@ -261,7 +283,7 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 
 All env vars are declared and validated in `src/env.ts` (via `@t3-oss/env-nextjs` + Zod) — add new vars there, not just to `.env.example`. The build fails fast if a required var is missing or invalid, rather than failing at runtime in production. Prefix client-side variables with `NEXT_PUBLIC_` and list them in the `client` block of `src/env.ts`.
 
-Installing or updating `@elirobinson/tokens` / `@elirobinson/react` requires a GitHub PAT with `read:packages`, set as `NODE_AUTH_TOKEN` (`.npmrc` at the repo root points the `@elirobinson` scope at the GitHub Packages registry). It's an install-time credential, not an app runtime var, so it's kept in `.env.local` rather than declared in `src/env.ts`/Zod. **`.env.local` isn't auto-loaded by pnpm/npm** — export it into your shell before installing:
+Installing or updating any `@elirobinson/*` package (`tokens`, `react`, `ai-patterns`) requires a GitHub PAT with `read:packages`, set as `NODE_AUTH_TOKEN` (`.npmrc` at the repo root points the `@elirobinson` scope at the GitHub Packages registry). It's an install-time credential, not an app runtime var, so it's kept in `.env.local` rather than declared in `src/env.ts`/Zod. **`.env.local` isn't auto-loaded by pnpm/npm** — export it into your shell before installing:
 
 ```bash
 export $(grep -v '^#' .env.local | xargs)
@@ -289,3 +311,5 @@ Toast UI is covered by the design system — don't add shadcn's `sonner` for it 
 - Do not install another component library (MUI, Chakra, Ant Design, Mantine, HeroUI, Headless UI, DaisyUI) or import Radix directly outside `src/components/ui/` — ESLint blocks it.
 - Do not hardcode colors, radii, shadows, durations, or font sizes. Use `@elirobinson/tokens` (`pnpm ds tokens`).
 - Do not paste a design system component inventory into a doc — it will go stale. Link to `pnpm ds` instead.
+- Do not import a design system package bare (`@elirobinson/react`). There are no barrel files; name a subpath — ESLint blocks it, and it wouldn't resolve anyway.
+- Do not ship UI that fails a `pnpm ds contracts` constraint (touch targets, visible focus, WCAG AA contrast, forwarded refs).

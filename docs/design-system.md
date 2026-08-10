@@ -1,6 +1,6 @@
 # Design System Guide
 
-**`@elirobinson/react` + `@elirobinson/tokens` are the primary source of components, tokens, and design patterns for anything built on this template.** Read this before writing a single line of UI.
+**`@elirobinson/react`, `@elirobinson/tokens`, and `@elirobinson/ai-patterns` are the primary source of components, tokens, and design patterns for anything built on this template.** Read this before writing a single line of UI.
 
 Upstream source of truth (Storybook, full docs, contribution guide): [EliRobinson/design-system](https://github.com/EliRobinson/design-system).
 
@@ -12,11 +12,14 @@ Every UI surface — a new marketing site, an app screen, one added component �
 
 | Need                                       | Where it comes from                                               |
 | ------------------------------------------ | ----------------------------------------------------------------- |
-| Components                                 | `@elirobinson/react/components/<Name>`                            |
+| Components                                 | `@elirobinson/react/components/<tier>/<Name>`                     |
 | Hooks                                      | `@elirobinson/react/hooks/<name>`                                 |
 | Color, type, space, radius, shadow, motion | `@elirobinson/tokens` (CSS custom properties)                     |
 | Typography                                 | The `.t-*` classes shipped with the tokens                        |
+| How to behave while building UI            | `@elirobinson/ai-patterns` — patterns, contracts, prompts         |
 | Layout patterns                            | Composed from design system primitives (see Storybook → Patterns) |
+
+None of these packages has a barrel export — a bare `@elirobinson/react` import does not resolve. Always name a subpath; ESLint enforces this.
 
 Never introduce a second UI vocabulary. MUI, Chakra, Ant Design, Mantine, HeroUI, Headless UI, DaisyUI and direct Radix imports are blocked by ESLint (`no-restricted-imports` in [`eslint.config.mjs`](../eslint.config.mjs)) — that block is a backstop, not the reason.
 
@@ -32,18 +35,26 @@ pnpm ds props Button    # exact props and variant unions for one component
 pnpm ds tokens          # every design token and its value
 pnpm ds tokens accent   # filter tokens by name or value
 pnpm ds classes         # every CSS class the design system ships
+pnpm ds contracts       # machine-checkable rules your UI must satisfy
+pnpm ds patterns        # how to work while building UI
+pnpm ds prompts         # reusable prompt templates (add-component, audit-page, adopt-system)
 ```
 
-`pnpm ds` reads `node_modules/@elirobinson/*` at run time, so its output always matches the installed version. **Run it at the start of any UI task.**
+`pnpm ds` reads `node_modules/@elirobinson/*` at run time, so its output always matches the installed version — including the directory layout, which it discovers rather than assumes. **Run it at the start of any UI task.**
 
-If you need more than the CLI gives you, read the package directly — it ships both types and source:
+`pnpm ds props <Name>` accepts either a bare name (`Card`) or a full subpath (`molecules/Card`), and prints the import specifier to copy.
+
+If you need more than the CLI gives you, read the packages directly — they ship types, source, and the raw pattern files:
 
 ```
-node_modules/@elirobinson/react/dist/components/<Name>.d.ts   # props, variants
-node_modules/@elirobinson/react/src/components/<Name>.tsx     # implementation
-node_modules/@elirobinson/react/src/styles.css                # component CSS
-node_modules/@elirobinson/tokens/src/tokens.css               # all tokens + dark theme
-node_modules/@elirobinson/tokens/src/tokens.json              # tokens as data
+node_modules/@elirobinson/react/dist/components/<tier>/<Name>.d.ts  # props, variants
+node_modules/@elirobinson/react/src/components/<tier>/<Name>.tsx    # implementation
+node_modules/@elirobinson/react/src/styles.css                      # component CSS entry point
+node_modules/@elirobinson/tokens/src/tokens.css                     # all tokens + dark theme
+node_modules/@elirobinson/tokens/src/tokens.json                    # tokens as data
+node_modules/@elirobinson/ai-patterns/src/contracts.json            # UI contracts + constraints
+node_modules/@elirobinson/ai-patterns/src/patterns.md               # AI product patterns
+node_modules/@elirobinson/ai-patterns/src/prompts/*.md              # prompt templates
 ```
 
 ---
@@ -51,16 +62,16 @@ node_modules/@elirobinson/tokens/src/tokens.json              # tokens as data
 ## Using components
 
 ```tsx
-import { Button } from '@elirobinson/react/components/Button'
+import { Button } from '@elirobinson/react/components/atoms/Button'
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent
-} from '@elirobinson/react/components/Card'
+} from '@elirobinson/react/components/molecules/Card'
 ```
 
-- Import per-component; there is no barrel export.
+- Import per-component, naming the full subpath; there is no barrel export. Components are organised by tier (`atoms` / `molecules` / `organisms`) — `pnpm ds` prints the subpath for each, so you never have to guess which tier something lives in.
 - Stylesheets (`@elirobinson/tokens/tokens.css`, `@elirobinson/react/styles.css`) are imported once in [`src/app/layout.tsx`](../src/app/layout.tsx). Never re-import them per component.
 - Use a component's own `variant` / `size` props instead of overriding its look with utility classes. `pnpm ds props <Name>` lists them.
 - Most components are unstyled-by-default containers plus a `className` passthrough — use `cn()` from `@/lib/utils` for conditional classes, and reserve utilities for layout (grid, flex, spacing) rather than repainting the component.
@@ -78,6 +89,28 @@ Tokens are CSS custom properties on `:root`, and the Tailwind color layer in [`s
 ### Dark mode
 
 The tokens ship a dark theme under `[data-theme="dark"]`. Everything token-driven inverts for free. If you add `next-themes`, mount it with `attribute="data-theme"` — the default `class` strategy will not trigger the design system's dark theme.
+
+---
+
+## AI patterns and contracts
+
+`@elirobinson/ai-patterns` ships the design system's expectations for _how_ UI gets built, in a form agents can read. It is a devDependency — nothing ships to the browser.
+
+```bash
+pnpm ds contracts   # machine-checkable rules
+pnpm ds patterns    # working principles
+pnpm ds prompts     # reusable prompt templates
+```
+
+**`pnpm ds contracts`** is the one to read before building. It carries:
+
+- `uiContracts` — baseline requirements every surface must meet (minimum touch target, visible focus, contrast level).
+- `componentConstraints` — named rules, each with a `summary` and a `check` you can verify against, covering import style, ref forwarding, touch-target sizing (both primary controls and dense affordances), hit-area overlap, and the atom/molecule/organism tier boundary.
+- `systemPromptStyle` — the voice for user-facing copy you write: practical, honest, warm; no hype or jargon-first language; always a clear next step.
+
+Treat these as requirements, not suggestions. Because they arrive as data rather than prose, they stay correct across versions — read them at build time instead of copying them into this file.
+
+**`pnpm ds prompts`** lists ready-made templates (`add-component`, `audit-page`, `adopt-system`). Print one with `pnpm ds prompts audit-page` and fill in the bracketed fields — useful when auditing an existing page against the system or contributing a component upstream.
 
 ---
 
@@ -100,18 +133,22 @@ Bumping the version is the only maintenance this template needs — no doc edits
 ```bash
 export NODE_AUTH_TOKEN=<github-pat-with-read:packages>
 pnpm add @elirobinson/tokens@latest @elirobinson/react@latest
+pnpm add -D @elirobinson/ai-patterns@latest
 pnpm ds          # confirm what the new version adds
 ```
 
-New components, tokens and typography classes show up in `pnpm ds` immediately, and new token values flow through the Tailwind aliases in `globals.css` without changes. Install requires GitHub Packages auth — see [AGENTS.md → Environment Variables](../AGENTS.md#environment-variables).
+New components, tokens, typography classes, contracts and prompts show up in `pnpm ds` immediately, and new token values flow through the Tailwind aliases in `globals.css` without changes. Even a reorganised package layout is handled: `pnpm ds` discovers the component directory structure rather than assuming it, so a change like the flat → `atoms`/`molecules`/`organisms` move needs no edit here. Install requires GitHub Packages auth — see [AGENTS.md → Environment Variables](../AGENTS.md#environment-variables).
 
 ---
 
 ## Definition of done for UI work
 
 - [ ] Ran `pnpm ds` and used existing components/hooks wherever they fit.
+- [ ] Ran `pnpm ds contracts` and every `componentConstraints` check holds.
+- [ ] Imports name a subpath (`components/<tier>/<Name>`) — no bare package imports.
 - [ ] No component library other than `@elirobinson/react` (shadcn only as a documented gap-filler).
 - [ ] No hardcoded colors, radii, shadows, durations, or font sizes — tokens only.
 - [ ] Typography uses `.t-*` classes or token-driven utilities.
+- [ ] Interactive controls meet the touch-target and visible-focus contracts.
 - [ ] Renders correctly with `data-theme="dark"` on `<html>`.
 - [ ] Any gap in the design system is called out explicitly for upstreaming.
