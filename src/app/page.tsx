@@ -1,13 +1,13 @@
 import { Card, CardContent } from '@elirobinson/react/components/Card'
+import { Eyebrow } from '@elirobinson/react/components/Eyebrow'
 
 export default function Home() {
   return (
     <main className='flex min-h-screen flex-col items-center justify-center gap-8 p-8'>
       <div className='max-w-2xl text-center'>
-        <h1 className='mb-4 text-4xl font-bold tracking-tight'>
-          Next Template
-        </h1>
-        <p className='text-muted-foreground mb-8'>
+        <Eyebrow>Starter template</Eyebrow>
+        <h1 className='t-h1 mt-3 mb-4'>Next Template</h1>
+        <p className='t-lead mb-8'>
           A production-ready Next.js starter with TypeScript, Tailwind CSS, the
           @elirobinson design system, TanStack, and best-practice tooling
           pre-configured.
@@ -17,10 +17,8 @@ export default function Home() {
           {stack.map((item) => (
             <Card key={item.name}>
               <CardContent className='p-3'>
-                <p className='text-sm font-medium'>{item.name}</p>
-                <p className='text-muted-foreground text-xs'>
-                  {item.description}
-                </p>
+                <p className='t-body-sm font-medium'>{item.name}</p>
+                <p className='t-caption'>{item.description}</p>
               </CardContent>
             </Card>
           ))}

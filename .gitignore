@@ -72,6 +72,11 @@ Temporary Items
 .apdisk
 Icon?
 
+# ---- AI agent tooling ----
+# Shared agent config (.claude/skills, .claude/launch.json, .cursor/rules) is
+# committed on purpose; only machine-local permissions are ignored.
+.claude/settings.local.json
+
 # ---- Misc ----
 *.pem
 .vercel
