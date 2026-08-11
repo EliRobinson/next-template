@@ -29,11 +29,11 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
+  // The font variables go on <html>, not <body>, so that the :root rule in
+  // globals.css can repoint the design system's family tokens at them.
   return (
-    <html lang='en'>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang='en' className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className='antialiased'>
         <Providers>{children}</Providers>
       </body>
     </html>

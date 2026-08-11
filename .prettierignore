@@ -7,3 +7,9 @@ coverage/
 pnpm-lock.yaml
 *.min.js
 *.min.css
+
+# Written verbatim by `pnpm ds init --agents`. Formatting them here would show
+# up as a diff every time they are regenerated.
+.claude/skills/design-system/SKILL.md
+.cursor/rules/design-system.mdc
+.github/copilot-instructions.md
