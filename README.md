@@ -2,7 +2,7 @@
 
 A production-ready Next.js 15 starter. Clone it, rename it, ship it.
 
-> **UI is built on the [design system](https://github.com/EliRobinson/design-system).** Components and hooks from `@elirobinson/react`, design values from `@elirobinson/tokens`, and the rules agents build under from `@elirobinson/ai-patterns` — for you and for any AI agent working in this repo. Run `pnpm ds` to see what the installed versions offer, and read [`docs/design-system.md`](docs/design-system.md) before building screens.
+> **UI is built on the [design system](https://github.com/EliRobinson/design-system).** Components and hooks from `@elirobinson/react`, design values from `@elirobinson/tokens`, and the rules agents build under from `@elirobinson/ai-patterns` — for you and for any AI agent working in this repo. Run `pnpm ds` before building screens — it answers what the installed versions offer, so nothing here goes stale. How the packages are wired in: [`docs/design-system.md`](docs/design-system.md).
 
 ## What's included
 
@@ -11,16 +11,16 @@ A production-ready Next.js 15 starter. Clone it, rename it, ship it.
 | Framework          | [Next.js 15](https://nextjs.org)                                                                         | App Router, Turbopack dev server                                                                      |
 | Language           | [TypeScript 5](https://www.typescriptlang.org)                                                           | Strict mode, `@/*` → `src/*` path alias                                                               |
 | Styling            | [Tailwind CSS v4](https://tailwindcss.com)                                                               | CSS-first config, no `tailwind.config.ts` needed                                                      |
-| Components         | [@elirobinson/react](https://github.com/EliRobinson/design-system)                                       | **Primary component source** (atoms/molecules/organisms); shadcn/ui only fills gaps                   |
-| Design tokens      | [@elirobinson/tokens](https://github.com/EliRobinson/design-system)                                      | Color, type, space, radius, shadow, motion — wired into Tailwind utilities                            |
-| AI UI contracts    | [@elirobinson/ai-patterns](https://github.com/EliRobinson/design-system)                                 | Machine-checkable UI rules, working patterns, prompt templates — `pnpm ds contracts`                  |
+| Components         | [@elirobinson/react](https://github.com/EliRobinson/design-system)                                       | **Primary component source**; shadcn/ui only fills gaps                                               |
+| Design tokens      | [@elirobinson/tokens](https://github.com/EliRobinson/design-system)                                      | Color, type, space, radius, shadow, motion — bridged into Tailwind utilities                          |
+| AI UI contracts    | [@elirobinson/ai-patterns](https://github.com/EliRobinson/design-system)                                 | The `pnpm ds` CLI, UI contracts, patterns, prompts, Playwright contract checks                        |
 | Data fetching      | [TanStack Query v5](https://tanstack.com/query)                                                          | With devtools, pre-wired provider                                                                     |
 | Tables             | [TanStack Table v8](https://tanstack.com/table)                                                          | Headless, fully typed                                                                                 |
 | Forms              | [TanStack Form](https://tanstack.com/form)                                                               | Type-safe, validation-ready                                                                           |
 | Virtualization     | [TanStack Virtual](https://tanstack.com/virtual)                                                         | Lists and grids                                                                                       |
 | Unit tests         | [Vitest](https://vitest.dev) + [React Testing Library](https://testing-library.com)                      | 70% coverage threshold                                                                                |
 | E2E tests          | [Playwright](https://playwright.dev)                                                                     | Chromium, Firefox, Safari, Mobile Chrome                                                              |
-| Linting            | [ESLint v9](https://eslint.org)                                                                          | Flat config, Next.js rules + [`neostandard`](https://github.com/neostandard/neostandard) (StandardJS) |
+| Linting            | [ESLint v9](https://eslint.org)                                                                          | Next.js rules + [`neostandard`](https://github.com/neostandard/neostandard) + design system contracts |
 | Formatting         | [Prettier v3](https://prettier.io)                                                                       | `prettier-config-standard` + `prettier-plugin-tailwindcss` for class sorting                          |
 | Git hooks          | [Husky v9](https://typicode.github.io/husky) + [lint-staged](https://github.com/lint-staged/lint-staged) | Lint/format on commit                                                                                 |
 | Commits            | [Commitizen](https://commitizen-tools.github.io/commitizen/) + [Commitlint](https://commitlint.js.org)   | Conventional Commits enforced                                                                         |
@@ -85,13 +85,11 @@ Open [http://localhost:3000](http://localhost:3000).
 │   └── types/                # Shared TypeScript types
 ├── tests/
 │   └── unit/                 # Vitest + RTL tests (*.test.tsx)
-├── e2e/                      # Playwright tests (*.spec.ts)
+├── e2e/                      # Playwright tests (*.spec.ts), incl. DS contracts
 ├── docs/
-│   └── design-system.md      # How to build UI from the design system
-├── scripts/
-│   └── design-system.mjs     # `pnpm ds` — live design system inventory
-├── .claude/skills/           # Claude Code skills (design-system)
-├── .cursor/rules/            # Cursor rules (design-system)
+│   └── design-system.md      # How the design system is wired into this repo
+├── .claude/skills/           # Claude Code skills (generated by `pnpm ds init`)
+├── .cursor/rules/            # Cursor rules (generated by `pnpm ds init`)
 ├── .github/
 │   ├── copilot-instructions.md # GitHub Copilot instructions
 │   └── workflows/ci.yml      # CI pipeline
@@ -110,24 +108,27 @@ Open [http://localhost:3000](http://localhost:3000).
 The [design system](https://github.com/EliRobinson/design-system) is the primary source of components, tokens, and design patterns. Start every UI task by asking the installed packages what they offer:
 
 ```bash
-pnpm ds                 # components (+ exports & variants), hooks, typography classes, tokens
-pnpm ds props Button    # exact props and variants; accepts `Button` or `atoms/Button`
-pnpm ds tokens accent   # tokens filtered by name or value
-pnpm ds classes         # every CSS class the design system ships
-pnpm ds contracts       # UI rules agents must satisfy (touch targets, focus, contrast)
-pnpm ds prompts         # prompt templates: add-component, audit-page, adopt-system
+pnpm ds                  # components (+ exports & variants), hooks, typography classes, tokens
+pnpm ds props Button     # props, variants, and the exact import line to copy
+pnpm ds tokens accent    # tokens filtered by name or value
+pnpm ds classes          # every CSS class the design system ships
+pnpm ds contracts        # UI rules agents must satisfy (touch targets, focus, contrast)
+pnpm ds patterns         # working principles and the definition of done for UI work
+pnpm ds prompts          # prompt templates: add-component, audit-page, adopt-system
 ```
+
+`ds` is `elirobinson-ds`, the CLI shipped by `@elirobinson/ai-patterns`. It reads the installed packages at run time, so its output matches the versions in use — including the component directory layout, which it discovers rather than assumes.
 
 ```tsx
 import { Button } from '@elirobinson/react/components/atoms/Button'
 import { Card, CardContent } from '@elirobinson/react/components/molecules/Card'
 ```
 
-Components are organised by tier (`atoms` / `molecules` / `organisms`) and there is no barrel export — `pnpm ds` prints the exact subpath for each, so the layout is never something you have to memorise.
+There is no barrel export — `pnpm ds props <Name>` prints the exact subpath, so the layout is never something you have to memorise.
 
-Tokens (`@elirobinson/tokens/tokens.css`) and component styles (`@elirobinson/react/styles.css`) are already imported in `src/app/layout.tsx`, and `src/app/globals.css` aliases the Tailwind color layer onto the tokens — so `bg-background`, `text-muted-foreground`, `border-border`, and `text-accent` are brand colors, not generic ones. Never hardcode a color, radius, shadow, or duration.
+Tokens and component styles are imported in `src/app/layout.tsx`, and `src/app/globals.css` imports `@elirobinson/tokens/tailwind.css` — which is what makes `bg-background`, `text-muted-foreground`, `border-border`, and `text-accent` resolve to brand values instead of nothing at all. Never hardcode a color, radius, shadow, or duration; `@elirobinson/eslint-config` fails the build if you do.
 
-Full rules — discovery, token usage, dark mode, and what to do when something's missing: [`docs/design-system.md`](docs/design-system.md).
+How it's all wired together: [`docs/design-system.md`](docs/design-system.md).
 
 ### Update the design system
 
@@ -135,9 +136,10 @@ Bumping the version is the only maintenance needed; nothing in this template har
 
 ```bash
 export NODE_AUTH_TOKEN=<your-github-pat>
+pnpm exec ds-resync             # what's out of date, and what changed while you were away
 pnpm add @elirobinson/tokens@latest @elirobinson/react@latest
-pnpm add -D @elirobinson/ai-patterns@latest
-pnpm ds
+pnpm add -D @elirobinson/ai-patterns@latest @elirobinson/eslint-config@latest
+pnpm ds init --agents --force   # refresh the agent-instruction files
 ```
 
 Even a reorganised package layout is absorbed automatically — `pnpm ds` discovers the component directory structure instead of assuming it.
@@ -287,15 +289,15 @@ Set up branch protection on `main` to require all three jobs before merging.
 
 Design-system-first behavior is reinforced across every surface an agent might read, so you get it whichever tool you use:
 
-| Surface                                                                          | Role                                                         |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| [`AGENTS.md`](AGENTS.md) / `CLAUDE.md`                                           | Primary agent guide — leads with the design system rule      |
-| [`docs/design-system.md`](docs/design-system.md)                                 | The deep guide: discovery, tokens, patterns, escalation path |
-| [`.claude/skills/design-system/SKILL.md`](.claude/skills/design-system/SKILL.md) | Claude Code skill that fires on any UI task                  |
-| [`.cursor/rules/design-system.mdc`](.cursor/rules/design-system.mdc)             | Cursor rule, auto-attached to `.tsx`/`.css` files            |
-| [`.github/copilot-instructions.md`](.github/copilot-instructions.md)             | GitHub Copilot / Copilot Workspace instructions              |
-| `pnpm ds`                                                                        | Live inventory, read from `node_modules` — never stale       |
-| `pnpm ds contracts` / `patterns` / `prompts`                                     | `@elirobinson/ai-patterns` — the rules agents build under    |
-| [`eslint.config.mjs`](eslint.config.mjs)                                         | Blocks foreign UI libraries, direct Radix, and bare imports  |
+| Surface                                                                          | Role                                                              |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [`AGENTS.md`](AGENTS.md) / `CLAUDE.md`                                           | Primary agent guide — leads with the design system rule           |
+| [`docs/design-system.md`](docs/design-system.md)                                 | How the design system is wired into this repo                     |
+| [`.claude/skills/design-system/SKILL.md`](.claude/skills/design-system/SKILL.md) | Claude Code skill that fires on any UI task                       |
+| [`.cursor/rules/design-system.mdc`](.cursor/rules/design-system.mdc)             | Cursor rule, auto-attached to `.tsx`/`.css` files                 |
+| [`.github/copilot-instructions.md`](.github/copilot-instructions.md)             | GitHub Copilot / Copilot Workspace instructions                   |
+| `pnpm ds`                                                                        | Live inventory, read from `node_modules` — never stale            |
+| [`eslint.config.mjs`](eslint.config.mjs)                                         | `@elirobinson/eslint-config` — the lintable half of the contracts |
+| [`e2e/design-system.spec.mts`](e2e/design-system.spec.mts)                       | The half only a browser can settle — targets, focus, contrast     |
 
-None of these hardcode the design system's contents, so a version bump is the only update they ever need — as proved by the `@elirobinson/react` 0.4 → 1.1 upgrade in this template, which reorganised 24 flat components into 45 across `atoms`/`molecules`/`organisms` and required no changes to any doc or to `pnpm ds`.
+The four agent-instruction files are generated by `pnpm ds init --agents`, and none of these hardcode the design system's contents — so a version bump is the only update they ever need. The `@elirobinson/react` 0.4 → 1.1 upgrade in this template reorganised 24 flat components into 45 across three tiers and required no changes to any doc or to `pnpm ds`.

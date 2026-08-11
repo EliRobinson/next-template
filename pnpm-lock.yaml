@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@elirobinson/react':
-        specifier: ^1.1.0
-        version: 1.1.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: ^1.3.0
+        version: 1.3.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@elirobinson/tokens':
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: ^0.3.0
+        version: 0.3.0
       '@t3-oss/env-nextjs':
         specifier: ^0.11.1
         version: 0.11.1(typescript@5.9.3)(zod@3.25.76)
@@ -74,8 +74,11 @@ importers:
         specifier: ^19.6.0
         version: 19.8.1
       '@elirobinson/ai-patterns':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.5.0
+        version: 0.5.0(@playwright/test@1.60.0)(axe-core@4.13.0)
+      '@elirobinson/eslint-config':
+        specifier: ^0.2.0
+        version: 0.2.0(@eslint/css@1.4.0)(eslint@9.39.4(jiti@2.7.0))
       '@eslint/eslintrc':
         specifier: ^3.2.0
         version: 3.3.5
@@ -109,6 +112,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^2.1.8
         version: 2.1.9(vitest@2.1.9(@types/node@22.19.19)(jsdom@25.0.1)(lightningcss@1.32.0))
+      axe-core:
+        specifier: ^4.13.0
+        version: 4.13.0
       commitizen:
         specifier: ^4.3.1
         version: 4.3.1(@types/node@22.19.19)(typescript@5.9.3)
@@ -403,17 +409,35 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@elirobinson/ai-patterns@0.3.0':
-    resolution: {integrity: sha512-uh+72p+ep2tlZl6Zh9jD8YZKoPgaknmPas+FQd9SBnzL4etMBxm/kyBavBkueWQ4y8E1pZ3JaWoTbgVF0TckeQ==, tarball: https://npm.pkg.github.com/download/@elirobinson/ai-patterns/0.3.0/54fd844906a3d5123a5e427399e04880176f849b}
+  '@elirobinson/ai-patterns@0.5.0':
+    resolution: {integrity: sha512-PA2vz3bjH1CEfUYzsW7gekIfpIQHaa8lY1xikbmtVxMZ0kk0WjOnQCrD7HI8C9kkTeE6HTxmQEX48MAswcJF3A==, tarball: https://npm.pkg.github.com/download/@elirobinson/ai-patterns/0.5.0/8f6fa96deb4ff60f95e105451772fd54c3de22b0}
+    hasBin: true
+    peerDependencies:
+      '@playwright/test': '>=1.40.0'
+      axe-core: '>=4.8.0'
+    peerDependenciesMeta:
+      '@playwright/test':
+        optional: true
+      axe-core:
+        optional: true
 
-  '@elirobinson/react@1.1.0':
-    resolution: {integrity: sha512-GNR7e5+puSF1xelo5APuBP/JjQVnSWxV+6FRT+du1vges4BT/6SppwgZL3ZDLJt6e7DIFkvzFG643ndU0wmc1Q==, tarball: https://npm.pkg.github.com/download/@elirobinson/react/1.1.0/d3e7f59bc23608601b014cb6c1ca968f8781cabc}
+  '@elirobinson/eslint-config@0.2.0':
+    resolution: {integrity: sha512-fLboENpP+id9wfyb5lJNLJSnmJv1TDAh3/9lo5RKHwb4knJU77sjAnJwb51YwpmLtfCMhHIrVbimQdxYQLUCMw==, tarball: https://npm.pkg.github.com/download/@elirobinson/eslint-config/0.2.0/94f208a3951e8c51aed517a32d08bb19498657d3}
+    peerDependencies:
+      '@eslint/css': '>=1.0.0'
+      eslint: '>=9.0.0'
+    peerDependenciesMeta:
+      '@eslint/css':
+        optional: true
+
+  '@elirobinson/react@1.3.0':
+    resolution: {integrity: sha512-LZSMIBACyOdMi5vy7FgHZCje3hzcdpBAR4O6JDZXU+m9n156DEDxP87vxf/CGNybiug2hPg6J/Qv7yNlcc28qw==, tarball: https://npm.pkg.github.com/download/@elirobinson/react/1.3.0/f68bc5757b5e581b703400e264199bb93872d203}
     peerDependencies:
       react: ^19.0.0
       react-dom: ^19.0.0
 
-  '@elirobinson/tokens@0.2.0':
-    resolution: {integrity: sha512-EC29zQuMefI/TuXte6cDwedxm5P7eorYE95gO70AlZcBOAimi8XFTup6RzUB5oAs3kiG21U2CDysts51Jhk2Yg==, tarball: https://npm.pkg.github.com/download/@elirobinson/tokens/0.2.0/89a4de0b3c762227b99d452448d6ba4a3daf1251}
+  '@elirobinson/tokens@0.3.0':
+    resolution: {integrity: sha512-QGBTtpklhIsRTjcnAO25WwKKXkb/AywdbanxnvZOfL0hqGOlZzvQx5gBWG7LA3SWTdYl/qfSR/kaRygh3EkUSw==, tarball: https://npm.pkg.github.com/download/@elirobinson/tokens/0.3.0/7ecd4c8f2dc71c8aad18169f8033261b0bd852e5}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -865,6 +889,18 @@ packages:
     resolution: {integrity: sha512-yL/sLrpmtDaFEiUj1osRP4TI2MDz1AddJL+jZ7KSqvBuliN4xqYY54IfdN8qD8Toa6g1iloph1fxQNkjOxrrpQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@eslint/core@1.2.1':
+    resolution: {integrity: sha512-MwcE1P+AZ4C6DWlpin/OmOA54mmIZ/+xZuJiQd4SyB29oAJjN30UW9wkKNptW2ctp4cEsvhlLY/CsQ1uoHDloQ==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@eslint/css-tree@4.0.5':
+    resolution: {integrity: sha512-iPmijIAq4hlIJB86PYmY/fcZORHtjphSqICDbwuw32A/JmkhZQ/K/6TjHE03zqf3n5yABpVcbRAMG8Mi9ojy8g==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@eslint/css@1.4.0':
+    resolution: {integrity: sha512-OnRNKgnbX+tufPuZc2kOJS+v1iIARvfJHRNEAVwN77DBpojl+rGjEP8NKTL6pEZ7BR+HtwIuSSdrymEFlANGxg==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
   '@eslint/eslintrc@3.3.5':
     resolution: {integrity: sha512-4IlJx0X0qftVsN5E+/vGujTRIFtwuLbNsVUe7TO6zYPDR1O6nFwvwhIKEKSrl6dZchmYBITazxKoUYOjdtjlRg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -880,6 +916,10 @@ packages:
   '@eslint/plugin-kit@0.4.1':
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@eslint/plugin-kit@0.7.2':
+    resolution: {integrity: sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A==}
+    engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
   '@floating-ui/core@1.7.5':
     resolution: {integrity: sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ==}
@@ -2152,6 +2192,12 @@ packages:
     peerDependencies:
       react: ^18 || ^19
 
+  '@tanstack/react-store@0.11.1':
+    resolution: {integrity: sha512-HaIGKI3YLmjBYIvy5DFDY23oNaYZIsTZfngey07Uh5iLVJgM3bIGCnZeOFOqzjFld9JHWcaHJnasD/bKoGKwJQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   '@tanstack/react-store@0.9.3':
     resolution: {integrity: sha512-y2iHd/N9OkoQbFJLUX1T9vbc2O9tjH0pQRgTcx1/Nz4IlwLvkgpuglXUx+mXt0g5ZDFrEeDnONPqkbfxXJKwRg==}
     peerDependencies:
@@ -2165,6 +2211,12 @@ packages:
       react: '>=16.8'
       react-dom: '>=16.8'
 
+  '@tanstack/react-table@9.1.2':
+    resolution: {integrity: sha512-YQPZFJ1nIi/bjjwsPZVouABgahDcl7Gdm33CdTStUJBn0DjEVJ2uhSTVmIoWt9MVKdQziXGAsXipSzy949Hygg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      react: '>=18'
+
   '@tanstack/react-virtual@3.13.24':
     resolution: {integrity: sha512-aIJvz5OSkhNIhZIpYivrxrPTKYsjW9Uzy+sP/mx0S3sev2HyvPb7xmjbYvokzEpfgYHy/HjzJ2zFAETuUfgCpg==}
     peerDependencies:
@@ -2177,12 +2229,19 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  '@tanstack/store@0.11.1':
+    resolution: {integrity: sha512-mzTOBhypOuDJAy/D8n2MfUZ1HFkXnmSETviRyhqEC8LUE7/IZQExOTxMANj3KjTofYTkFNpBY67qaVrT41YccA==}
+
   '@tanstack/store@0.9.3':
     resolution: {integrity: sha512-8reSzl/qGWGGVKhBoxXPMWzATSbZLZFWhwBAFO9NAyp0TxzfBP0mIrGb8CP8KrQTmvzXlR/vFPPUrHTLBGyFyw==}
 
   '@tanstack/table-core@8.21.3':
     resolution: {integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==}
     engines: {node: '>=12'}
+
+  '@tanstack/table-core@9.1.2':
+    resolution: {integrity: sha512-ONpWQeass1sfg80CWF1NSwQ8r3GiqxA2lT/EdqIcrDEPZ0Z+0mM94eQoFYLPN0Kztzj8TQVb2+PrSZSItqA61g==}
+    engines: {node: '>=20'}
 
   '@tanstack/virtual-core@3.14.0':
     resolution: {integrity: sha512-JLANqGy/D6k4Ujmh8Tr25lGimuOXNiaVyXaCAZS0W+1390sADdGnyUdSWNIfd49gebtIxGMij4IktRVzrdr12Q==}
@@ -2668,8 +2727,8 @@ packages:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
 
-  axe-core@4.11.4:
-    resolution: {integrity: sha512-KunSNx+TVpkAw/6ULfhnx+HWRecjqZGTOyquAoWHYLRSdK1tB5Ihce1ZW+UY3fj33bYAFWPu7W/GRSmmrCGuxA==}
+  axe-core@4.13.0:
+    resolution: {integrity: sha512-UzGt8zg7Ny8djbYMhxl2zuEevVa7r2gJjYY5Lwr1xM7+XU2nd6CkIWFTVcCIbAP63vSz71NaVyyuSk9lHKcy0A==}
     engines: {node: '>=4'}
 
   axobject-query@4.1.0:
@@ -4170,6 +4229,9 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
+  mdn-data@2.29.0:
+    resolution: {integrity: sha512-pVxQFCcaYUEAH853+v7yoI/qzhxXSq1bTb9obMYGYAN1c3Hen+XDCEvr296XhstrwlSTNgOR7mCSD4JPjbJe5A==}
+
   meow@12.1.1:
     resolution: {integrity: sha512-BhXM0Au22RwUneMPwSCnyhTOizdWoIEPU9sp0Aqa1PnDMR5Wv2FGXYDjuzJEIX+Eo2Rb8xuYe5jrnm5QowQFkw==}
     engines: {node: '>=16.10'}
@@ -5646,17 +5708,26 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@elirobinson/ai-patterns@0.3.0': {}
+  '@elirobinson/ai-patterns@0.5.0(@playwright/test@1.60.0)(axe-core@4.13.0)':
+    optionalDependencies:
+      '@playwright/test': 1.60.0
+      axe-core: 4.13.0
 
-  '@elirobinson/react@1.1.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@elirobinson/eslint-config@0.2.0(@eslint/css@1.4.0)(eslint@9.39.4(jiti@2.7.0))':
     dependencies:
-      '@elirobinson/tokens': 0.2.0
-      '@tanstack/react-table': 8.21.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      eslint: 9.39.4(jiti@2.7.0)
+    optionalDependencies:
+      '@eslint/css': 1.4.0
+
+  '@elirobinson/react@1.3.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@elirobinson/tokens': 0.3.0
+      '@tanstack/react-table': 9.1.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@tanstack/react-virtual': 3.14.9(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
-  '@elirobinson/tokens@0.2.0': {}
+  '@elirobinson/tokens@0.3.0': {}
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -5916,6 +5987,24 @@ snapshots:
     dependencies:
       '@types/json-schema': 7.0.15
 
+  '@eslint/core@1.2.1':
+    dependencies:
+      '@types/json-schema': 7.0.15
+    optional: true
+
+  '@eslint/css-tree@4.0.5':
+    dependencies:
+      mdn-data: 2.29.0
+      source-map-js: 1.2.1
+    optional: true
+
+  '@eslint/css@1.4.0':
+    dependencies:
+      '@eslint/core': 1.2.1
+      '@eslint/css-tree': 4.0.5
+      '@eslint/plugin-kit': 0.7.2
+    optional: true
+
   '@eslint/eslintrc@3.3.5':
     dependencies:
       ajv: 6.15.0
@@ -5938,6 +6027,12 @@ snapshots:
     dependencies:
       '@eslint/core': 0.17.0
       levn: 0.4.1
+
+  '@eslint/plugin-kit@0.7.2':
+    dependencies:
+      '@eslint/core': 1.2.1
+      levn: 0.4.1
+    optional: true
 
   '@floating-ui/core@1.7.5':
     dependencies:
@@ -7128,6 +7223,13 @@ snapshots:
       '@tanstack/query-core': 5.100.11
       react: 19.2.6
 
+  '@tanstack/react-store@0.11.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@tanstack/store': 0.11.1
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+      use-sync-external-store: 1.6.0(react@19.2.6)
+
   '@tanstack/react-store@0.9.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@tanstack/store': 0.9.3
@@ -7141,6 +7243,14 @@ snapshots:
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
+  '@tanstack/react-table@9.1.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@tanstack/react-store': 0.11.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@tanstack/table-core': 9.1.2
+      react: 19.2.6
+    transitivePeerDependencies:
+      - react-dom
+
   '@tanstack/react-virtual@3.13.24(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@tanstack/virtual-core': 3.14.0
@@ -7153,9 +7263,15 @@ snapshots:
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
+  '@tanstack/store@0.11.1': {}
+
   '@tanstack/store@0.9.3': {}
 
   '@tanstack/table-core@8.21.3': {}
+
+  '@tanstack/table-core@9.1.2':
+    dependencies:
+      '@tanstack/store': 0.11.1
 
   '@tanstack/virtual-core@3.14.0': {}
 
@@ -7721,7 +7837,7 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.1.0
 
-  axe-core@4.11.4: {}
+  axe-core@4.13.0: {}
 
   axobject-query@4.1.0: {}
 
@@ -8408,7 +8524,7 @@ snapshots:
       array-includes: 3.1.9
       array.prototype.flatmap: 1.3.3
       ast-types-flow: 0.0.8
-      axe-core: 4.11.4
+      axe-core: 4.13.0
       axobject-query: 4.1.0
       damerau-levenshtein: 1.0.8
       emoji-regex: 9.2.2
@@ -9355,6 +9471,9 @@ snapshots:
   make-error@1.3.6: {}
 
   math-intrinsics@1.1.0: {}
+
+  mdn-data@2.29.0:
+    optional: true
 
   meow@12.1.1: {}
 
