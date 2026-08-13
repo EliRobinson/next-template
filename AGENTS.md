@@ -284,14 +284,17 @@ Copy `.env.example` to `.env.local` for local development. Never commit `.env.lo
 
 All env vars are declared and validated in `src/env.ts` (via `@t3-oss/env-nextjs` + Zod) — add new vars there, not just to `.env.example`. The build fails fast if a required var is missing or invalid, rather than failing at runtime in production. Prefix client-side variables with `NEXT_PUBLIC_` and list them in the `client` block of `src/env.ts`.
 
-Installing or updating any `@elirobinson/*` package (`tokens`, `react`, `ai-patterns`, `eslint-config`) requires a GitHub PAT with `read:packages`, set as `NODE_AUTH_TOKEN` (`.npmrc` at the repo root points the `@elirobinson` scope at the GitHub Packages registry). It's an install-time credential, not an app runtime var, so it's kept in `.env.local` rather than declared in `src/env.ts`/Zod. **`.env.local` isn't auto-loaded by pnpm/npm** — export it into your shell before installing:
+Installing or updating any `@elirobinson/*` package (`tokens`, `react`, `ai-patterns`, `eslint-config`) requires a GitHub PAT with `read:packages`. The repo-root `.npmrc` points the `@elirobinson` scope at GitHub Packages, but it deliberately carries **no credential** — set yours once at the user level:
 
 ```bash
-export $(grep -v '^#' .env.local | xargs)
-pnpm install
+pnpm config set "//npm.pkg.github.com/:_authToken" <your-PAT> --global
 ```
 
-CI reads the equivalent value from the `NODE_AUTH_TOKEN` repository secret (wired into each job in `.github/workflows/ci.yml`), not from this file.
+That writes to `~/.npmrc`, outside the repo. It is a one-time setup step, not a per-shell export, and it is not stored in `.env.local`.
+
+**Why not a `${NODE_AUTH_TOKEN}` placeholder in the repo's `.npmrc`?** pnpm 10 stopped expanding environment variables in registry credentials read from a project `.npmrc`, because that file is committed and a malicious registry line could exfiltrate the token. A placeholder there resolves to nothing and installs fail with a `401` that names no cause. Credentials have to come from a source pnpm still trusts — `~/.npmrc` or `pnpm config set`.
+
+CI does the same thing explicitly: an `Authenticate to GitHub Packages` step writes the `NODE_AUTH_TOKEN` repository secret into the runner's `~/.npmrc` before installing. The secret is scoped to that step alone, so it is absent from the environment during `pnpm install` and the test and build steps.
 
 ## Database (optional)
 

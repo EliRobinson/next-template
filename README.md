@@ -44,20 +44,26 @@ git clone https://github.com/EliRobinson/next-template.git my-app
 cd my-app
 nvm use        # or: node --version should be ≥ 18
 cp .env.example .env.local
-# fill in values as needed, including NODE_AUTH_TOKEN (a GitHub PAT with
-# read:packages) so pnpm can install @elirobinson/tokens and @elirobinson/react
+# fill in values as needed
 ```
 
-### 2. Install dependencies
+### 2. Authenticate to GitHub Packages
 
-`.env.local` isn't auto-loaded by pnpm/npm — export it into your shell first:
+The design system (`@elirobinson/tokens`, `@elirobinson/react`) installs from a private registry, so pnpm needs a GitHub PAT with `read:packages`. Set it once, at the user level:
 
 ```bash
-export $(grep -v '^#' .env.local | xargs)
+pnpm config set "//npm.pkg.github.com/:_authToken" <your-github-pat> --global
+```
+
+This writes to `~/.npmrc`, outside the repo — it is not part of `.env.local`, and it is not a per-shell export. The repo's own `.npmrc` maps the `@elirobinson` scope to the registry and carries no credential, because pnpm 10+ ignores credentials in a committed project `.npmrc`.
+
+### 3. Install dependencies
+
+```bash
 pnpm install
 ```
 
-### 3. Start the dev server
+### 4. Start the dev server
 
 ```bash
 pnpm dev
@@ -132,10 +138,9 @@ How it's all wired together: [`docs/design-system.md`](docs/design-system.md).
 
 ### Update the design system
 
-Bumping the version is the only maintenance needed; nothing in this template hardcodes the design system's contents. Requires a GitHub PAT with `read:packages` exported as `NODE_AUTH_TOKEN` (the repo's `.npmrc` points the `@elirobinson` scope at `npm.pkg.github.com`):
+Bumping the version is the only maintenance needed; nothing in this template hardcodes the design system's contents. Requires the GitHub Packages credential from [step 2](#2-authenticate-to-github-packages):
 
 ```bash
-export NODE_AUTH_TOKEN=<your-github-pat>
 pnpm exec ds-resync             # what's out of date, and what changed while you were away
 pnpm add @elirobinson/tokens@latest @elirobinson/react@latest
 pnpm add -D @elirobinson/ai-patterns@latest @elirobinson/eslint-config@latest
