@@ -189,6 +189,14 @@ Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` wil
 
 ---
 
+## Visual Verification
+
+- For any front-end change (component, page, layout, styling), take a screenshot of the affected UI before making the change and another after, using the Browser pane / preview tools.
+- Attach both screenshots to the PR description (before/after) so reviewers can assess the UI/UX diff without pulling the branch.
+- Skip this only when the change has no rendered visual effect (e.g. pure logic, types, non-UI server code).
+
+---
+
 ## Testing Strategy
 
 ### Unit / integration (Vitest + RTL)
