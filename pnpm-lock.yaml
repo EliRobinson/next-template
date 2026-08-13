@@ -9,11 +9,11 @@ importers:
   .:
     dependencies:
       '@elirobinson/react':
-        specifier: ^1.3.0
-        version: 1.3.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+        specifier: ^2.0.1
+        version: 2.0.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@elirobinson/tokens':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: ^0.5.0
+        version: 0.5.0
       '@t3-oss/env-nextjs':
         specifier: ^0.11.1
         version: 0.11.1(typescript@5.9.3)(zod@3.25.76)
@@ -74,11 +74,11 @@ importers:
         specifier: ^19.6.0
         version: 19.8.1
       '@elirobinson/ai-patterns':
-        specifier: ^0.5.0
-        version: 0.5.0(@playwright/test@1.60.0)(axe-core@4.13.0)
+        specifier: ^0.9.2
+        version: 0.9.2(@playwright/test@1.60.0)(axe-core@4.13.0)
       '@elirobinson/eslint-config':
-        specifier: ^0.2.0
-        version: 0.2.0(@eslint/css@1.4.0)(eslint@9.39.4(jiti@2.7.0))
+        specifier: ^0.3.0
+        version: 0.3.0(@eslint/css@1.4.0)(eslint@9.39.4(jiti@2.7.0))
       '@eslint/eslintrc':
         specifier: ^3.2.0
         version: 3.3.5
@@ -409,35 +409,28 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@elirobinson/ai-patterns@0.5.0':
-    resolution: {integrity: sha512-PA2vz3bjH1CEfUYzsW7gekIfpIQHaa8lY1xikbmtVxMZ0kk0WjOnQCrD7HI8C9kkTeE6HTxmQEX48MAswcJF3A==, tarball: https://npm.pkg.github.com/download/@elirobinson/ai-patterns/0.5.0/8f6fa96deb4ff60f95e105451772fd54c3de22b0}
+  '@elirobinson/ai-patterns@0.9.2':
+    resolution: {integrity: sha512-hPkXJMvUB/PyRj1atM3PMlP1KqCSu5VixR9fzs5rnh/txfclh/ASAuumR5aXfyM8PSIT1Lyr9OJJ4oCL6hNwlA==, tarball: https://npm.pkg.github.com/download/@elirobinson/ai-patterns/0.9.2/59a2b8dcc67eee818e6a5ca599e6268ad0b2f62a}
+    engines: {node: '>=22.12.0'}
     hasBin: true
     peerDependencies:
       '@playwright/test': '>=1.40.0'
       axe-core: '>=4.8.0'
-    peerDependenciesMeta:
-      '@playwright/test':
-        optional: true
-      axe-core:
-        optional: true
 
-  '@elirobinson/eslint-config@0.2.0':
-    resolution: {integrity: sha512-fLboENpP+id9wfyb5lJNLJSnmJv1TDAh3/9lo5RKHwb4knJU77sjAnJwb51YwpmLtfCMhHIrVbimQdxYQLUCMw==, tarball: https://npm.pkg.github.com/download/@elirobinson/eslint-config/0.2.0/94f208a3951e8c51aed517a32d08bb19498657d3}
+  '@elirobinson/eslint-config@0.3.0':
+    resolution: {integrity: sha512-85AG+QkHD//Np1XG1X3zBMfScU1rLuCG1/WbvCSPBQh8shRHccBWfCLyDTjTt2uYRn9CSKlEuq8eAp+cGatXwA==, tarball: https://npm.pkg.github.com/download/@elirobinson/eslint-config/0.3.0/999b446d4c271f080bd0446be94edef573deeb57}
     peerDependencies:
       '@eslint/css': '>=1.0.0'
       eslint: '>=9.0.0'
-    peerDependenciesMeta:
-      '@eslint/css':
-        optional: true
 
-  '@elirobinson/react@1.3.0':
-    resolution: {integrity: sha512-LZSMIBACyOdMi5vy7FgHZCje3hzcdpBAR4O6JDZXU+m9n156DEDxP87vxf/CGNybiug2hPg6J/Qv7yNlcc28qw==, tarball: https://npm.pkg.github.com/download/@elirobinson/react/1.3.0/f68bc5757b5e581b703400e264199bb93872d203}
+  '@elirobinson/react@2.0.1':
+    resolution: {integrity: sha512-UwRrZClhf3PvDauLvIHk1yFrXnG6XII0S79v7YxaCeT3MgT69xvGVSWym4yS99X39FlQhvA6Pw3aHlXrcWqDjQ==, tarball: https://npm.pkg.github.com/download/@elirobinson/react/2.0.1/ac46c5ea29eb1ffad20e9ab81c632a9d43bebd9d}
     peerDependencies:
       react: ^19.0.0
       react-dom: ^19.0.0
 
-  '@elirobinson/tokens@0.3.0':
-    resolution: {integrity: sha512-QGBTtpklhIsRTjcnAO25WwKKXkb/AywdbanxnvZOfL0hqGOlZzvQx5gBWG7LA3SWTdYl/qfSR/kaRygh3EkUSw==, tarball: https://npm.pkg.github.com/download/@elirobinson/tokens/0.3.0/7ecd4c8f2dc71c8aad18169f8033261b0bd852e5}
+  '@elirobinson/tokens@0.5.0':
+    resolution: {integrity: sha512-IsMhIEFWamSgJF1d+h8kDXq+yodeEAOPqCKZbE/4UcoOgITL6stPvB7AdA/2+rgLrvK3Be4p9qOGDgEkUeRWBQ==, tarball: https://npm.pkg.github.com/download/@elirobinson/tokens/0.5.0/38eb01a0357fe471cd3cc640ff0eb968ca4ddf0a}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -5708,26 +5701,25 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@elirobinson/ai-patterns@0.5.0(@playwright/test@1.60.0)(axe-core@4.13.0)':
-    optionalDependencies:
+  '@elirobinson/ai-patterns@0.9.2(@playwright/test@1.60.0)(axe-core@4.13.0)':
+    dependencies:
       '@playwright/test': 1.60.0
       axe-core: 4.13.0
 
-  '@elirobinson/eslint-config@0.2.0(@eslint/css@1.4.0)(eslint@9.39.4(jiti@2.7.0))':
+  '@elirobinson/eslint-config@0.3.0(@eslint/css@1.4.0)(eslint@9.39.4(jiti@2.7.0))':
     dependencies:
-      eslint: 9.39.4(jiti@2.7.0)
-    optionalDependencies:
       '@eslint/css': 1.4.0
+      eslint: 9.39.4(jiti@2.7.0)
 
-  '@elirobinson/react@1.3.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+  '@elirobinson/react@2.0.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
-      '@elirobinson/tokens': 0.3.0
+      '@elirobinson/tokens': 0.5.0
       '@tanstack/react-table': 9.1.2(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@tanstack/react-virtual': 3.14.9(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
 
-  '@elirobinson/tokens@0.3.0': {}
+  '@elirobinson/tokens@0.5.0': {}
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -5990,20 +5982,17 @@ snapshots:
   '@eslint/core@1.2.1':
     dependencies:
       '@types/json-schema': 7.0.15
-    optional: true
 
   '@eslint/css-tree@4.0.5':
     dependencies:
       mdn-data: 2.29.0
       source-map-js: 1.2.1
-    optional: true
 
   '@eslint/css@1.4.0':
     dependencies:
       '@eslint/core': 1.2.1
       '@eslint/css-tree': 4.0.5
       '@eslint/plugin-kit': 0.7.2
-    optional: true
 
   '@eslint/eslintrc@3.3.5':
     dependencies:
@@ -6032,7 +6021,6 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
-    optional: true
 
   '@floating-ui/core@1.7.5':
     dependencies:
@@ -9472,8 +9460,7 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mdn-data@2.29.0:
-    optional: true
+  mdn-data@2.29.0: {}
 
   meow@12.1.1: {}
 

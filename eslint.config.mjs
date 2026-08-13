@@ -22,7 +22,12 @@ const eslintConfig = [
       'out/**',
       'build/**',
       'dist/**',
-      'coverage/**'
+      'coverage/**',
+      // Agent instructions and the skill trees written by the design system's
+      // own generators. The UI-kit files there are prototype references, not
+      // app code — they are never built, and a fix would be overwritten by the
+      // next `ds-resync artifacts --write`.
+      '.claude/**'
     ]
   },
   // Standard JS style rules, deferring formatting to Prettier.

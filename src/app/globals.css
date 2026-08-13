@@ -6,12 +6,19 @@
    carries the whole system with it: tokens.css's own body rule, the .t-*
    classes, Tailwind's font-sans, and every design system component.
 
-   Unlayered on purpose — tokens.css declares these on an unlayered :root, which
-   would win against anything inside @layer base. */
+   These hooks are the supported seam (tokens >= 0.5.0): tokens.css reads each
+   one ahead of its own stack and declares none of them, so the override lands
+   from any cascade layer. Overriding --font-sans directly would instead depend
+   on this file being imported after the unlayered tokens.css.
+
+   The override supplies the whole stack — a matched hook drops tokens.css's
+   fallbacks — so the system families are spelled out here. */
 :root {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --ds-font-sans-override:
+    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --ds-font-display-override:
+    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --ds-font-mono-override: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 @layer base {
