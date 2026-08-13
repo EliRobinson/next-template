@@ -33,6 +33,7 @@ pnpm ds prompts [name]   # reusable prompt templates
 - Colors, radii, shadows, durations, and font sizes come from tokens — mapped utilities, `.t-*` classes, or `var(--token)`. Never a literal.
 - With Tailwind v4, `@import '@elirobinson/tokens/tailwind.css'` maps the Tailwind color namespace onto the tokens; without it, utilities like `bg-background` resolve to nothing.
 - Dark mode is `[data-theme="dark"]` (`.dark` also works). With `next-themes`, set `attribute="data-theme"`.
+- Token overrides go in an **unlayered** `:root` block — `tokens.css` is unlayered, so an override inside `@layer base` silently loses to it. With `next/font`, re-point the families through `--ds-font-sans-override` / `--ds-font-mono-override` instead, with the font class on `<html>`.
 - Stylesheets (`@elirobinson/tokens/tokens.css`, then `@elirobinson/react/styles.css`) are imported once in the app shell.
 - Missing a piece? Compose from primitives → the repo's sanctioned gap-filler → hand-roll from tokens and flag it as a design system gap worth upstreaming.
 - Foreign UI libraries, direct Radix imports, bare `@elirobinson/*` imports, and hardcoded design values are blocked by `@elirobinson/eslint-config`.
@@ -231,7 +232,10 @@ That prints what is out of date and what changed while you were away. Then:
 pnpm add @elirobinson/tokens@latest @elirobinson/react@latest
 pnpm add -D @elirobinson/ai-patterns@latest @elirobinson/eslint-config@latest
 pnpm ds init --agents --force   # refresh the four agent-instruction files
+pnpm exec ds-resync artifacts --write # regenerate the generated skill trees
 ```
+
+`ds-resync artifacts` writes the version-stamped component reference and brand skills under `.claude/skills/` — `design-system-reference/`, `ds-resync/`, and `miltinson-design/` — and records what it wrote in `.claude/ds-artifacts.json`. It leaves files you have edited alone unless you pass `--force`, and `--fail-on-drift` exits non-zero when the snapshot and the installed `@elirobinson/react` disagree. Those trees are generated output: they are excluded from ESLint and Prettier, and a fix made in place is overwritten by the next run.
 
 Requires `NODE_AUTH_TOKEN` — see [Environment Variables](#environment-variables).
 

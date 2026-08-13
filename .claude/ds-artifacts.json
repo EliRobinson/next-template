@@ -1,0 +1,33 @@
+{
+  "$comment": "Written by `ds-resync artifacts`. Do not edit by hand — re-run the command. Hashes here are what the command last wrote, and are what lets it tell an upgrade from one of your edits.",
+  "aiPatternsVersion": "0.9.2",
+  "reactVersion": "2.0.1",
+  "tokensVersion": "0.5.0",
+  "files": {
+    ".claude/skills/design-system-reference/SKILL.md": "b2fa5294a7d4c7d8a2a3654164e6cc54ac48446a78a0993661b233a11a9154ad",
+    ".claude/skills/design-system-reference/llms-full.txt": "e9a0a79ea7250ef3c82492f45a6545384110f003602481a2665d1af88e6d5972",
+    ".claude/skills/design-system-reference/llms.txt": "9a3edd738425474757eb9c50a3beb4b3a489fc2bc03049cd28dff64baf6800f6",
+    ".claude/skills/ds-resync/SKILL.md": "8b86fc40b9f5b3e0f8da499eb8cb0d443c7f1398fa313c8a877993abfad09909",
+    ".claude/skills/miltinson-design/README.md": "3f2e29be34f46e498aa2c87fdb26d03964c13f1cc14d7bb0a2b9eb2469ab1115",
+    ".claude/skills/miltinson-design/SKILL.md": "ee846693de7e78f92cef46ff91cc53ba34e7e89a8ab737e0fa946e9ceb12d67e",
+    ".claude/skills/miltinson-design/assets/logo-lockup.svg": "88eed33d425d55feb73c85ee7a2a93d1bcf1cdb7a620e79a2da7c22946ff4e05",
+    ".claude/skills/miltinson-design/assets/logo-mark.svg": "2475b1b9d244e6b8dd58bfe6eaf7df3549656c25122f7b5eee91bc2ee9d6e467",
+    ".claude/skills/miltinson-design/assets/logo-wordmark-dark.svg": "68afa8eccb4b7661722e0c721d3d76330d1dd29cc91a1bd7dfa8d2d9b6cc172e",
+    ".claude/skills/miltinson-design/assets/logo-wordmark.svg": "1dd14ab0c2eef4d6ba144c9259c0d14fd9096bd516b68d8850677e16d40e67e3",
+    ".claude/skills/miltinson-design/assets/pattern-dotgrid.svg": "e763f1652f245a0b7c9fe8042bce1547bfd909af6147343749ad3236e706f28a",
+    ".claude/skills/miltinson-design/colors_and_type.css": "6fada18ea86105ca0bede8cb587fe2fcf2de266a7336e711066f96054decd485",
+    ".claude/skills/miltinson-design/ui_kits/_shared/Primitives.jsx": "c22d25f63d690415e68af5a290c3d30d2fb2be21f550b90cc2d2536e8a599228",
+    ".claude/skills/miltinson-design/ui_kits/docs/README.md": "faed84e029ee2d27c6ab3234d63e83e004f1c39ed03555c6078f7b5c56d7c986",
+    ".claude/skills/miltinson-design/ui_kits/docs/index.html": "2080e928bb3fe9f2ab2c787e6e00aab891661d303d16c0d084943d288b951cd8",
+    ".claude/skills/miltinson-design/ui_kits/marketing/HeaderFooter.jsx": "ba4ac2b82732ee8ee6e9260b9076e3d43142a379c4282b4952182f0f92cf90bf",
+    ".claude/skills/miltinson-design/ui_kits/marketing/README.md": "303a3bbba91a595447ce4e90016be9272d1ec554e2185daf5d81be64e467211a",
+    ".claude/skills/miltinson-design/ui_kits/marketing/Sections.jsx": "9ecad377fc4fb9f5a6297efffa356e6f884de24a639f288687b37cef81afc2f7",
+    ".claude/skills/miltinson-design/ui_kits/marketing/index.html": "64509abfa37f04828a882bba71bc5f242e56bd55a6352030374a788783ce2f94",
+    ".claude/skills/miltinson-design/ui_kits/mobile/README.md": "e988e3e405869e6d66c49a0761d8bc817d0e7b276529de098a88b950e4adad91",
+    ".claude/skills/miltinson-design/ui_kits/mobile/Screens.jsx": "ed7bf76b9f22caa1646e62771fdbab5534ce1c754eaabf750b733e804c08ed86",
+    ".claude/skills/miltinson-design/ui_kits/mobile/index.html": "634bf29a961637221c697c12ac356e995e8724cdacc1360d78db901d33ce3cf1",
+    ".claude/skills/miltinson-design/ui_kits/webapp/Components.jsx": "106e857c1a8ece1e99ad29016464355a1d1d71ce5c1b6e2ee37f4fa0c8aaa4b1",
+    ".claude/skills/miltinson-design/ui_kits/webapp/README.md": "1c480b0b07c4d4520eac4cdba5bf17c42a1fd4f3c4c95675245397352f582855",
+    ".claude/skills/miltinson-design/ui_kits/webapp/index.html": "e5d51cc4b3dbaff59bbd724796b371134498f0a2b7a8629139de518b25dcdddf"
+  }
+}
