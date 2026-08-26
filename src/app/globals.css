@@ -1,26 +1,6 @@
 @import 'tailwindcss';
 @import '@elirobinson/tokens/tailwind.css';
 
-/* next/font loads Geist under a generated family name, so the token's literal
-   'Geist' never resolves here. Repointing the family tokens at the loaded faces
-   carries the whole system with it: tokens.css's own body rule, the .t-*
-   classes, Tailwind's font-sans, and every design system component.
-
-   These hooks are the supported seam (tokens >= 0.5.0): tokens.css reads each
-   one ahead of its own stack and declares none of them, so the override lands
-   from any cascade layer. Overriding --font-sans directly would instead depend
-   on this file being imported after the unlayered tokens.css.
-
-   The override supplies the whole stack — a matched hook drops tokens.css's
-   fallbacks — so the system families are spelled out here. */
-:root {
-  --ds-font-sans-override:
-    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --ds-font-display-override:
-    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --ds-font-mono-override: var(--font-geist-mono), ui-monospace, monospace;
-}
-
 @layer base {
   * {
     border-color: var(--border);
