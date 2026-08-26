@@ -39,6 +39,27 @@ pnpm ds prompts [name]   # reusable prompt templates
 - Foreign UI libraries, direct Radix imports, bare `@elirobinson/*` imports, and hardcoded design values are blocked by `@elirobinson/eslint-config`.
 - Contract checks a browser has to settle — touch targets, visible focus, WCAG AA contrast — come from `@elirobinson/ai-patterns/testing/playwright`; drop them into the E2E suite.
 
+### UI copy
+
+Functional copy — errors, empty states, helper and hint text, toasts, labels, button text, tooltips, confirmations, validation — is chrome. **State the fact, then the consequence, then the action, and stop.** Never write:
+
+- **Unverifiable frequency claims** — "almost always", "this rarely happens". You do not have that data.
+- **Blame attribution** — "on their side", "check your connection". Say what is observable, not whose fault it might be.
+- **Filler pacing** — "in a moment", "hang tight".
+- **Unprompted reassurance or apology** — "don't worry", "we'll sort it out". Reassurance is allowed only when it answers a question the reader is actually asking, and then it is a fact: "You have not been charged."
+- **Escalation paths nobody asked for** — "if it keeps happening, reply to…" belongs in a support surface, not a control.
+- **Enthusiasm** — "Great news!", exclamation marks.
+
+```
+❌ You have not been charged. This is almost always a passing blip on their side,
+   so try again in a moment. If it keeps happening, reply and we'll sort it out.
+✅ You have not been charged. Try again.
+```
+
+**This governs chrome, not this product's editorial voice.** Marketing prose, conversational surfaces, and written deliverables are content — their voice is a deliberate design decision and this rule says nothing about them. Chrome follows this rule even on a surface that mixes the two. Read as an instruction to flatten the product's voice, it does more harm than the padding it removes.
+
+If functional copy runs past two short sentences, it is explaining, reassuring, or selling — cut it back. `@elirobinson/eslint-config` warns on the literal phrases, over copy props and chrome components only; it never reads ordinary prose.
+
 Before calling UI work done, run `pnpm ds patterns` and work the **Definition of Done for UI work** checklist it prints.
 
 <!-- design-system:end -->
@@ -143,7 +164,7 @@ The rules live in [UI: design system first](#ui-design-system-first) above and i
 
 - **This repo's sanctioned gap-filler is shadcn/ui in `src/components/ui/`** — the one place direct Radix imports are allowed. Add via `pnpm dlx shadcn@latest add <component>`, never by hand, and only for a primitive the design system genuinely doesn't cover. Restyle it with design system tokens.
 - `src/app/globals.css` imports `@elirobinson/tokens/tailwind.css`, which is what makes `bg-background` and friends resolve. It carries no aliases of its own — a new token needs no edit here.
-- The font tokens are repointed at the `next/font` faces in `globals.css`, because next/font loads Geist under a generated family name that the token's literal `'Geist'` would never match.
+- Fonts come from the design system: `@elirobinson/tokens/tokens.css` self-hosts Geist and JetBrains Mono, so the app loads no `next/font` faces of its own and `globals.css` declares no `--ds-font-*-override`. Add one only for a family the system does not ship.
 - `@elirobinson/tokens/tokens.css` and `@elirobinson/react/styles.css` are imported once in `src/app/layout.tsx`; don't re-import them per component.
 - Use Tailwind utilities for layout/spacing on JSX. Avoid custom CSS files.
 - Use `cn()` (from `@/lib/utils`) to merge conditional classes.
