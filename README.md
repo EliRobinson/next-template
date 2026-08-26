@@ -71,6 +71,11 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Set `PORT` to move it — `PORT=3010 pnpm dev` — when a second worktree or another
+project already holds 3000. The default is spelled out in `.claude/launch.json`,
+`playwright.config.ts`, and the E2E job in CI, so change those together if you
+want a different one permanently.
+
 ---
 
 ## Project structure

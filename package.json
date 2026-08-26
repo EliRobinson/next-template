@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "next dev --turbopack -p $(node -e \"console.log(3000 + Math.floor(Math.random() * 1000))\")",
+    "dev": "next dev --turbopack -p ${PORT:-3000}",
     "build": "next build",
     "ds": "elirobinson-ds",
     "start": "next start",
