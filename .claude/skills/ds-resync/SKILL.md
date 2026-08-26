@@ -15,11 +15,24 @@ registry. This skill brings them current and fixes what the upgrade breaks.
 pnpm --package=@elirobinson/ai-patterns dlx ds-resync --json
 ```
 
-This is read-only — it never modifies the repo. It prints one record per
-`@elirobinson/*` dependency:
+This is read-only — it never modifies the repo.
 
-- `installedVersion` / `targetVersion` / `latestVersion` — where the repo is, where this
-  run would take it, and the newest thing published
+**It compares the versions the lockfile resolved — what CI and a fresh clone
+install — against the registry, and separately reports when `node_modules`
+disagrees with that lockfile.** `node_modules` is never the baseline: an install
+that has drifted ahead of the committed manifests would otherwise make the repo
+look current while the version it actually builds is majors behind.
+
+It prints one record per `@elirobinson/*` dependency:
+
+- `currentVersion` / `targetVersion` / `latestVersion` — where the repo is, where
+  this run would take it, and the newest thing published
+- `currentSource` — where `currentVersion` came from: `lockfile` (normal),
+  `range` (no lockfile entry, so the declared range's floor is standing in — a
+  weaker claim), or `unresolved` (the range names no published version, e.g.
+  `workspace:*`, and the package was not compared at all)
+- `lockedVersion` / `installedVersion` — the lockfile's answer and
+  `node_modules`' answer, kept apart. Either can be `null`.
 - `target` — the distance requested for this package: `latest`, `minor`, or `patch`
 - `heldBack` — true when `targetVersion` is below `latestVersion` because of `target`.
   A held-back package is not "current"; a newer version is waiting.
@@ -30,7 +43,10 @@ This is read-only — it never modifies the repo. It prints one record per
   `version` and a `body`
 - `skipped` — set when the declared range was too complex to rewrite safely
 
-If nothing is outdated, say so and stop.
+Alongside the packages, a top-level `drift` array lists every package whose
+`node_modules` copy disagrees with the lockfile — see step 1b.
+
+If nothing is outdated and `drift` is empty, say so and stop.
 
 If the command fails with a 401, the repo's registry token is missing or
 expired. Report the fix it prints; do not try to work around it.
@@ -38,6 +54,29 @@ expired. Report the fix it prints; do not try to work around it.
 An empty `entries` array on an outdated package means that version was
 published before the packages started shipping `CHANGELOG.md`. Treat it as
 "notes unavailable", not "nothing changed" — a major jump still needs care.
+
+## 1b. If it reports NODE_MODULES OUT OF SYNC
+
+A non-empty `drift` means `node_modules` holds different versions from the
+lockfile. **Deal with this before anything else**, because while it holds, every
+tool that introspects installed code is answering for a version this repo does
+not build — including `pnpm ds` and `pnpm ds props <Name>`. Code written against
+those answers compiles locally and breaks in CI.
+
+The fix is an install, not an upgrade:
+
+```bash
+pnpm install
+```
+
+Then re-run step 1. Do not "fix" drift by upgrading `package.json` to match what
+happens to be installed — that changes what the repo ships in order to match a
+local accident.
+
+In CI, `--fail-on-out-of-sync` exits 2 on this condition. It is separate from
+`--fail-on-outdated`, which exits 2 when something is behind: different causes,
+different fixes. (Both are distinct from `ds-resync artifacts --fail-on-drift`,
+which is about the generated snapshot, not about `node_modules`.)
 
 ## 2. Read the changelog entries before upgrading
 
@@ -58,7 +97,10 @@ pnpm --package=@elirobinson/ai-patterns dlx ds-resync --write
 ```
 
 This rewrites the ranges in `package.json` (preserving `^`, `~`, or a pin) and
-runs the repo's package manager install.
+runs the repo's package manager install. It also records the versions it
+crossed in `.claude/ds-resync.json`, which is where step 4 reads the range it
+migrates across — nothing else on disk remembers where the upgrade started once
+the install has happened.
 
 If it reports that `package.json` was updated but the install exited non-zero,
 the ranges have already changed. Read the install output before re-running —
@@ -82,8 +124,55 @@ tell them what remains held back, so the deferred migration stays visible.
 
 ## 4. Migrate
 
-Fix the call sites the breaking entries described. Follow the repo's existing
-conventions. Constraints that always apply:
+The token migrations are mechanical. Run them rather than deriving them:
+
+```bash
+pnpm --package=@elirobinson/ai-patterns dlx ds-resync migrate
+```
+
+Dry-run by default, like everything else here. It reads the migration manifest
+each installed `@elirobinson` package ships, selects the entries between the
+version you upgraded from and the one you are on now, and finds their call sites
+in this repo's CSS and TSX. Step 3 recorded that range at
+`.claude/ds-resync.json`, so in the normal flow this takes no arguments.
+
+Read the report, then apply it:
+
+```bash
+pnpm --package=@elirobinson/ai-patterns dlx ds-resync migrate --write
+```
+
+`--from <version>` and `--to <version>` supply the range by hand when the repo
+was upgraded some other way — exact versions, never ranges. `--only` restricts
+the run to named packages, `--cwd` targets another directory, `--json` emits the
+report as data, and `--fail-on-pending` exits 2 when anything was left for a
+human, which is the CI spelling.
+
+**Do not re-derive token renames from the changelog prose you read in step 2.**
+The manifest is that same change expressed as data, checked against the
+package's own stylesheets by its own test, and it knows which occurrences are
+safe to rewrite and which are not. A hand-written find/replace over the same
+tokens is a guess at what the command already knows.
+
+**The manifest is tokens and nothing else.** Component API changes, renamed
+props, new required props, changed import paths, removed components — those are
+still yours, and the entries from step 2 are the only description of them.
+
+What the command declines to rewrite it prints under `left for you — not
+rewritten, on purpose`, each with a `why not:` line and, where a replacement
+exists, a `use:` line. Those are deliberate refusals, not failures: a token
+aliased through one of your own custom properties, a property it could not read
+at that position, a token whose value moved but whose name did not, a
+replacement that depends on which fill an element is actually painted with.
+There is no force flag, by design — rewriting those would change what this repo
+paints without saying so. Resolve each one by hand at the file and line printed.
+
+A package below the version that first ships a manifest reports nothing, and
+that is not a failure. Token migrations ship in `@elirobinson/tokens` from
+0.9.0; below that, the changelog entries from step 2 are the migration notes and
+the call sites are yours to fix.
+
+Constraints that always apply:
 
 - Imports use package subpaths only — `@elirobinson/react/components/<tier>/<Name>`.
   A bare `@elirobinson/react` import does not resolve.
@@ -118,5 +207,7 @@ and then repeat this step.
 
 ## 6. Verify
 
-Run the repo's own checks — typecheck, tests, build — and report the results. Do
-not claim the upgrade is done until they pass.
+Run the repo's own checks — typecheck, tests, build — and report the results. If
+step 4 ran with `--write`, run the repo's formatter first: those rewrites are
+edits to the bytes, not formatted output. Do not claim the upgrade is done until
+the checks pass.

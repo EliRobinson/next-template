@@ -7,7 +7,7 @@ user-invocable: true
 <!-- ds-artifacts:managed:begin -->
 <!-- Regenerated on every publish from what the tarball actually contains. Do not edit. -->
 
-This skill folder holds: `colors_and_type.css`, `assets/`, `ui_kits/marketing/`, `ui_kits/webapp/`, `ui_kits/mobile/`, `ui_kits/docs/`, `README.md`, `SKILL.md`.
+This skill folder holds: `colors_and_type.css`, `palettes.css`, `mobile.css`, `fonts.css`, `fonts/`, `assets/`, `ui_kits/marketing/`, `ui_kits/webapp/`, `ui_kits/mobile/`, `ui_kits/docs/`, `ui_kits/_shared/`, `README.md`, `SKILL.md`.
 Read `README.md` first, then explore the rest.
 
 The brand rules in this skill cover voice, color, type, and visual direction. They do *not*

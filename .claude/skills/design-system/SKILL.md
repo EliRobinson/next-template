@@ -13,6 +13,8 @@ Upstream source of truth: https://github.com/EliRobinson/design-system
 
 Run these **before** writing UI. They read `node_modules` at run time, so they match the installed versions exactly — including the component directory layout, which is discovered rather than assumed:
 
+> If `ds` prints `node_modules disagrees with the lockfile` on stderr, stop and run your package manager's install first. It is describing versions that are installed here but are not what CI builds, so code written against them will fail there. `ds-resync` reports the full picture.
+
 ```bash
 pnpm ds                  # components (+ exports & variants), hooks, typography classes, token groups
 pnpm ds props <Name>     # props and variant unions; accepts `Card` or `molecules/Card`
@@ -60,7 +62,30 @@ Dark mode is `[data-theme="dark"]` (with `.dark` accepted as a compatibility ali
 
 The statically checkable ones are enforced by `@elirobinson/eslint-config`. The ones only a browser can settle — touch targets, visible focus, WCAG AA contrast — are enforced by the Playwright helpers in `@elirobinson/ai-patterns/testing/playwright`.
 
-## Step 5 — When something is missing
+## Step 5 — Write functional copy as chrome
+
+Errors, empty states, helper and hint text, toasts, labels, button text, tooltips, confirmations and validation are chrome. **State the fact, then the consequence, then the action, and stop.** Never write:
+
+- **Unverifiable frequency claims** — "almost always", "this rarely happens". You do not have that data.
+- **Blame attribution** — "on their side", "check your connection". Say what is observable, not whose fault it might be.
+- **Filler pacing** — "in a moment", "hang tight".
+- **Unprompted reassurance or apology** — "don't worry", "we'll sort it out". Reassurance is allowed only where it answers a question the reader is actually asking, and then it is a fact: "You have not been charged."
+- **Escalation paths nobody asked for** — "if it keeps happening, reply to…" belongs in a support surface, not a control.
+- **Enthusiasm** — "Great news!", exclamation marks.
+
+```
+❌ You have not been charged. This is almost always a passing blip on their side,
+   so try again in a moment. If it keeps happening, reply and we'll sort it out.
+✅ You have not been charged. Try again.
+```
+
+Past two short sentences, functional copy is explaining, reassuring, or selling. Cut it back.
+
+**This governs chrome, not this product's editorial voice.** Marketing prose, conversational surfaces, and written deliverables are content — their voice is a deliberate design decision, and this rule says nothing about them. Where a surface mixes the two, the chrome follows this rule and the content is left alone. Do not read this as licence to flatten the product's voice; that does more harm than the padding it removes.
+
+`@elirobinson/eslint-config` warns on the literal phrases above. Its scope is that same line: copy props (`title`, `description`, `label`, `placeholder`, …) and the children of chrome components (`Alert`, `Toast`, `EmptyState`, …), never ordinary prose. It ships as a warning so an upgrade cannot break a build; raise it with `designSystem({ copy: { severity: 'error' } })` once existing copy is clean.
+
+## Step 6 — When something is missing
 
 Stop at the first rung that works:
 

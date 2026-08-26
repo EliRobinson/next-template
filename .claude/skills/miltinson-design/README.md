@@ -31,12 +31,17 @@ Eli runs many small projects. The point of this system is to keep them **visuall
 
 | Path                | What's there |
 | ------------------- | --- |
-| `colors_and_type.css` | All brand design tokens — colors, type, spacing, radii, shadow, motion. Import this anywhere. |
+| `colors_and_type.css` | The neutral ramp, surfaces, type, spacing, radii, shadow and motion — and the entry point that @imports the three files below. Import this anywhere. |
+| `palettes.css`      | The brand ramps and every semantic built on them, on a `data-palette` dial. colors_and_type.css @imports it by this exact name — rename it and the whole system renders greyscale. |
+| `mobile.css`        | Radii, the small end of the type ramp, gutter and containers retuned under `data-platform="mobile"`. Declares no token of its own and changes no colour. |
+| `fonts.css`         | Self-hosted @font-face for Geist and JetBrains Mono — colors_and_type.css @imports it, so keep them siblings. |
+| `fonts/`            | The woff2 files fonts.css loads, with their SIL OFL licenses. |
 | `assets/`           | Wordmark, monogram, lockup, dot-grid pattern. SVG-first. |
 | `ui_kits/marketing/` | Marketing site kit (homepage, services, store, portfolio). |
 | `ui_kits/webapp/`   | Web app / dashboard kit (auth, sidebar, settings). |
 | `ui_kits/mobile/`   | Mobile screen kit. |
 | `ui_kits/docs/`     | Docs / long-form reading kit. |
+| `ui_kits/_shared/`  | JSX primitives every kit loads over `../_shared/Primitives.jsx` — a kit copied without it renders nothing. |
 | `README.md`         | Brand voice, color, type, and layout rules. Read this first. |
 | `SKILL.md`          | This file — the skill entry point. |
 
@@ -105,8 +110,9 @@ synergy, leverage, unlock, empower, robust, cutting-edge, revolutionary, world-c
 ### Color
 
 - **Ink-led palette.** Pure black (`--ink-1000`) for headings, near-black (`--ink-800`) for primary text. White surfaces, hairline borders. The brand reads as a printed page first, a digital interface second.
+- **The brand is a dial.** Amber-over-Forest is the `ember` palette and it is the default, but `data-palette` swaps the ramps and the neutral tint underneath them wholesale. Everything below describes ember; nothing in the system may assume it. Never paint a ramp step (`--signal-500`, `--anchor-500`) in a component — reach for the semantic token (`--accent`, `--accent-ink`, `--anchor`) that follows the dial.
 - **Miltinson Amber** (`--signal-500`, oklch 72.5% 0.175 65) is the **only loud color**. Used for: primary CTAs, the dot in the wordmark, eyebrow underlines, key stat figures, and link hover states. Never as a flat background block — it's a signal, not a fill.
-- **Miltinson Forest** (`--anchor-500`) is the secondary anchor — used sparingly for trust marks, success states, and the Coaching Guides surface (the most "earnest" sub-brand).
+- **Miltinson Forest** (`--anchor-500`) is the secondary anchor — used sparingly for trust marks and the Coaching Guides surface (the most "earnest" sub-brand). Not for success states: status owns its own hues (`--status-success` and friends) and does not move with the brand, so a success badge stays green under a palette whose anchor is not.
 - **No gradients.** Flat color only. Solid blocks of `--ink-1000` or `--ink-50` are the move.
 - **Imagery vibe:** warm, slightly desaturated, real (not stock-y). Think well-lit kitchens, classrooms, hands holding a phone — not abstract gradient meshes.
 
@@ -255,4 +261,4 @@ synergy, leverage, unlock, empower, robust, cutting-edge, revolutionary, world-c
 
 - **No codebase or Figma was shared** — this system is reverse-engineered from the public miltinsons.com homepage and services page. The portfolio/store/about pages were not accessible during the fetch.
 - **Logo is a generated wordmark.** The real site logo wasn't extracted; I designed "Miltinson." in Geist Semibold with an amber dot. Swap in your real artwork when ready.
-- **Geist** is loaded from Google Fonts; if you have licensed `.woff2` files, drop them into `fonts/` and replace the `@import` in `colors_and_type.css`.
+- **Geist and JetBrains Mono are self-hosted** — `colors_and_type.css` @imports `fonts.css`, which loads the `.woff2` files in `fonts/` (both families are SIL OFL 1.1; licenses ship alongside). Nothing is fetched from Google Fonts. Keep the three siblings together wherever the stylesheet goes.
