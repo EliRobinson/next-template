@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "next dev --turbopack -p ${PORT:-3000}",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "ds": "elirobinson-ds",
     "start": "next start",

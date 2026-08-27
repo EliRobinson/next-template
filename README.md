@@ -69,12 +69,12 @@ pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Each run binds to a random free port and prints it — e.g. `Local: http://localhost:63205` —
+so concurrent worktrees or projects never race for the same one. `.claude/launch.json`
+detects the actual bound port (`autoPort: true`) rather than assuming a fixed one.
 
-Set `PORT` to move it — `PORT=3010 pnpm dev` — when a second worktree or another
-project already holds 3000. The default is spelled out in `.claude/launch.json`,
-`playwright.config.ts`, and the E2E job in CI, so change those together if you
-want a different one permanently.
+`pnpm test:e2e` is unaffected: it runs a production server (`next start`) on a
+fixed port 3000, set independently in `playwright.config.ts` and the E2E job in CI.
 
 ---
 

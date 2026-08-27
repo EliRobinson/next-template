@@ -124,7 +124,7 @@ docs/
 ## Development Commands
 
 ```bash
-pnpm dev          # Start dev server (Turbopack) on 3000; PORT=3010 pnpm dev to move it
+pnpm dev          # Start dev server (Turbopack) on a random free port
 pnpm ds           # Design system discovery — see "UI: design system first" above
 pnpm exec ds-resync # What's out of date in the design system, and what changed
 pnpm build        # Production build
