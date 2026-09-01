@@ -1,6 +1,6 @@
 # next-template
 
-A production-ready Next.js 15 starter. Clone it, rename it, ship it.
+A production-ready Next.js 16 starter. Clone it, rename it, ship it.
 
 > **UI is built on the [design system](https://github.com/EliRobinson/design-system).** Components and hooks from `@elirobinson/react`, design values from `@elirobinson/tokens`, and the rules agents build under from `@elirobinson/ai-patterns` — for you and for any AI agent working in this repo. Run `pnpm ds` before building screens — it answers what the installed versions offer, so nothing here goes stale. How the packages are wired in: [`docs/design-system.md`](docs/design-system.md).
 
@@ -8,7 +8,7 @@ A production-ready Next.js 15 starter. Clone it, rename it, ship it.
 
 | Category           | Tool                                                                                                     | Notes                                                                                                 |
 | ------------------ | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Framework          | [Next.js 15](https://nextjs.org)                                                                         | App Router, Turbopack dev server                                                                      |
+| Framework          | [Next.js 16](https://nextjs.org)                                                                         | App Router, Turbopack dev server                                                                      |
 | Language           | [TypeScript 5](https://www.typescriptlang.org)                                                           | Strict mode, `@/*` → `src/*` path alias                                                               |
 | Styling            | [Tailwind CSS v4](https://tailwindcss.com)                                                               | CSS-first config, no `tailwind.config.ts` needed                                                      |
 | Components         | [@elirobinson/react](https://github.com/EliRobinson/design-system)                                       | **Primary component source**; shadcn/ui only fills gaps                                               |

@@ -10,7 +10,7 @@ test.describe('Home page', () => {
 
   test('displays the tech stack', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('Next.js 15', { exact: true })).toBeVisible()
+    await expect(page.getByText('Next.js 16', { exact: true })).toBeVisible()
     await expect(
       page.getByText('Tailwind CSS 4', { exact: true })
     ).toBeVisible()
