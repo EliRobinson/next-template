@@ -29,7 +29,7 @@ export default function Home() {
 }
 
 const stack = [
-  { name: 'Next.js 15', description: 'App Router + Turbopack' },
+  { name: 'Next.js 16', description: 'App Router + Turbopack' },
   { name: 'TypeScript 5', description: 'Strict mode + path aliases' },
   { name: 'Tailwind CSS 4', description: 'Utility-first styling' },
   { name: '@elirobinson/react', description: 'Design system components' },

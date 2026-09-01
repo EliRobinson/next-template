@@ -1,16 +1,8 @@
-import { dirname } from 'path'
-import { fileURLToPath } from 'url'
-import { FlatCompat } from '@eslint/eslintrc'
 import designSystem from '@elirobinson/eslint-config'
 import prettierConfig from 'eslint-config-prettier'
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
+import nextTypeScript from 'eslint-config-next/typescript'
 import neostandard from 'neostandard'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname
-})
 
 /** @type {import("eslint").Linter.Config[]} */
 const eslintConfig = [
@@ -35,7 +27,8 @@ const eslintConfig = [
   // own `ts: true` registers a second @typescript-eslint plugin instance
   // that conflicts with the one next/typescript registers.
   ...neostandard({ noStyle: true }),
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...nextCoreWebVitals,
+  ...nextTypeScript,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [

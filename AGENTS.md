@@ -68,7 +68,7 @@ Before calling UI work done, run `pnpm ds patterns` and work the **Definition of
 
 ## Project Overview
 
-A production-ready **Next.js 15** starter template. Built with the App Router, TypeScript strict mode, Tailwind CSS v4, the [`@elirobinson/react`](https://github.com/EliRobinson/design-system) design system, TanStack data libraries, an optional Drizzle/Postgres database layer, and a full quality-gate toolchain.
+A production-ready **Next.js 16** starter template. Built with the App Router, TypeScript strict mode, Tailwind CSS v4, the [`@elirobinson/react`](https://github.com/EliRobinson/design-system) design system, TanStack data libraries, an optional Drizzle/Postgres database layer, and a full quality-gate toolchain.
 
 ---
 
@@ -76,7 +76,7 @@ A production-ready **Next.js 15** starter template. Built with the App Router, T
 
 | Layer                  | Choice                                                                                             |
 | ---------------------- | -------------------------------------------------------------------------------------------------- |
-| Framework              | Next.js 15 (App Router, Turbopack)                                                                 |
+| Framework              | Next.js 16 (App Router, Turbopack)                                                                 |
 | Language               | TypeScript 5 (strict, `@/*` path alias → `src/*`)                                                  |
 | Components & styling   | `@elirobinson/react` + `@elirobinson/tokens` (primary) on Tailwind CSS v4; shadcn/ui as gap-filler |
 | UI contracts for AI    | `@elirobinson/ai-patterns` (the `pnpm ds` CLI, contracts, patterns, prompts)                       |
@@ -345,3 +345,13 @@ Toast UI is covered by the design system — don't add shadcn's `sonner` for it 
 - Do not re-implement upstream tooling here. The `ds` CLI, the Tailwind token bridge, the import bans, and the agent-instruction files all ship from the design system; a local copy drifts silently.
 - Do not edit inside the `design-system:begin/end` markers in `AGENTS.md`, `.cursor/rules/design-system.mdc`, `.claude/skills/design-system/SKILL.md`, or `.github/copilot-instructions.md` — `pnpm ds init --agents --force` overwrites them.
 - Do not ship UI that fails a `pnpm ds contracts` constraint (touch targets, visible focus, WCAG AA contrast, forwarded refs).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
