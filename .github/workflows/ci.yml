@@ -24,8 +24,25 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # `pnpm config set`, not an echo into ~/.npmrc, so this keeps working after a
+      # pnpm major. pnpm 11 keeps its own credential store and sends tokens only
+      # from there: a token in ~/.npmrc is still listed back in pnpm's own
+      # "authorization settings were found" output while never reaching the
+      # request, which surfaces as a 401 saying no authorization header was set.
+      # `pnpm config set` writes wherever the running pnpm actually reads.
+      #
+      # The guard is here because an empty secret produces that same 401, and the
+      # error names neither the secret nor the repo. Failing on the length turns a
+      # confusing registry error into an actionable one.
       - name: Authenticate to GitHub Packages
-        run: echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> ~/.npmrc
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NODE_AUTH_TOKEN is empty. Set it with:" \
+                 "gh secret set NODE_AUTH_TOKEN --repo ${{ github.repository }}" \
+                 "(a GitHub token with read:packages)."
+            exit 1
+          fi
+          pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
@@ -54,8 +71,25 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # `pnpm config set`, not an echo into ~/.npmrc, so this keeps working after a
+      # pnpm major. pnpm 11 keeps its own credential store and sends tokens only
+      # from there: a token in ~/.npmrc is still listed back in pnpm's own
+      # "authorization settings were found" output while never reaching the
+      # request, which surfaces as a 401 saying no authorization header was set.
+      # `pnpm config set` writes wherever the running pnpm actually reads.
+      #
+      # The guard is here because an empty secret produces that same 401, and the
+      # error names neither the secret nor the repo. Failing on the length turns a
+      # confusing registry error into an actionable one.
       - name: Authenticate to GitHub Packages
-        run: echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> ~/.npmrc
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NODE_AUTH_TOKEN is empty. Set it with:" \
+                 "gh secret set NODE_AUTH_TOKEN --repo ${{ github.repository }}" \
+                 "(a GitHub token with read:packages)."
+            exit 1
+          fi
+          pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
@@ -86,8 +120,25 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # `pnpm config set`, not an echo into ~/.npmrc, so this keeps working after a
+      # pnpm major. pnpm 11 keeps its own credential store and sends tokens only
+      # from there: a token in ~/.npmrc is still listed back in pnpm's own
+      # "authorization settings were found" output while never reaching the
+      # request, which surfaces as a 401 saying no authorization header was set.
+      # `pnpm config set` writes wherever the running pnpm actually reads.
+      #
+      # The guard is here because an empty secret produces that same 401, and the
+      # error names neither the secret nor the repo. Failing on the length turns a
+      # confusing registry error into an actionable one.
       - name: Authenticate to GitHub Packages
-        run: echo "//npm.pkg.github.com/:_authToken=$NODE_AUTH_TOKEN" >> ~/.npmrc
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NODE_AUTH_TOKEN is empty. Set it with:" \
+                 "gh secret set NODE_AUTH_TOKEN --repo ${{ github.repository }}" \
+                 "(a GitHub token with read:packages)."
+            exit 1
+          fi
+          pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
