@@ -2,6 +2,8 @@
 
 This file is the single source of truth for AI agents and humans working in this codebase. `CLAUDE.md` is a symlink to this file.
 
+Domain terms (whatever this app calls its own concepts) live in `CONTEXT.md` at the repo root — use its vocabulary rather than inventing your own. Architectural decisions are recorded in `docs/adr/`, one file per decision. Read what's relevant before making a structural change. Create either one when the first term or decision needs a home.
+
 ---
 
 <!-- design-system:begin -->
@@ -170,6 +172,7 @@ The rules live in [UI: design system first](#ui-design-system-first) above and i
 - Use `cn()` (from `@/lib/utils`) to merge conditional classes.
 - Class order is enforced by `prettier-plugin-tailwindcss` — don't hand-sort.
 - Installing/updating the design system requires GitHub Packages auth — see [Environment Variables](#environment-variables).
+- **Use the `copywriting` skill for every piece of user-facing text** before it ships: UI chrome, empty and error states, toasts, labels, and README prose. Load it with the Skill tool, run your copy through it, and hold the result to both that skill and the [UI copy](#ui-copy) rules. The bar is production-ready text with no AI-isms: no "delve", "seamless", "robust", "leverage", "unlock", no em-dash asides, no filler, no hype.
 
 ### TanStack Query
 
@@ -207,6 +210,33 @@ This project enforces **Conventional Commits**. All commits must match:
 Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` will be validated by the `commit-msg` Husky hook.
 
 **Breaking changes:** add `!` after the type (`feat!:`) and a `BREAKING CHANGE:` footer.
+
+---
+
+## Pull requests
+
+### Review gate (before a PR is opened)
+
+Four reviewers run in parallel on the branch diff. None of them edits code.
+
+1. **Thermonuclear code-quality review** (Fable 5.1, the `code-quality-review` skill). Covers maintainability, abstractions, and file size.
+2. **Correctness critic** (Opus). Covers edge cases, error paths, concurrency, data correctness, and whether the tests would catch a regression.
+3. **Spec, security, and copy critic** (Sonnet). Checks conformance with `CONTEXT.md` and `docs/adr/`, the security rules (auth, input validation, secrets, XSS), and every user-facing string, using the `copywriting` skill and the [UI copy](#ui-copy) rules.
+4. **DRY critic** (Opus). Hunts duplication: repeated literals and constants, near-duplicate functions, parallel structures that should be one parametrized thing, hand-written types that duplicate generated ones, and the same rule written in two places. It also names abstractions to leave alone, where two things look alike but change for different reasons.
+
+The author checks each finding against the code and fixes the valid ones. Findings the author disagrees with are answered with evidence in the PR body, never dropped silently. The PR body gets a **Review** section that marks each finding as fixed, declined (and why), or filed (with an issue link). Anything that needs a human decision gets the `needs-eli` label.
+
+---
+
+## Working with other agents
+
+Several agents may build in parallel, each in its own worktree and branch, and each owns the files named in its GitHub issue.
+
+- **Talk to your peers directly.** Use `SendMessage` to ask the owner of a contract before you guess at its shape. Tell dependent agents when you push an interface change. The first line of a message must stand on its own.
+- **Do not duplicate work.** Before building a helper, check the other branches (`git fetch origin` then `git show origin/<branch>:<path>`) and the issues (`gh issue list`). If someone else owns it, ask them for it.
+- **Stay in your lane.** Never edit files another agent owns. Ask the owner, or leave a note on their issue.
+- **Record decisions on the issue.** Messages are not saved anywhere lasting, so a contract or scope decision also goes into a comment on the relevant GitHub issue.
+- **Never bypass hooks.** If a hook fails on a file you do not own, stop and tell the owner and the coordinator.
 
 ---
 
