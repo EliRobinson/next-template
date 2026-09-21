@@ -17,10 +17,10 @@ Installing or updating any `@elirobinson/*` package needs two npm config lines: 
 
 The repo has no `.npmrc`. Every environment supplies both lines itself:
 
-- **Local:** put both lines in `~/.npmrc`, once per machine. Edit the file directly: `pnpm config set --global` writes to pnpm's own `auth.ini` instead.
+- **Local:** append both lines to `~/.npmrc`, once per machine. `read -rs` keeps the token out of shell history. The leading `\n` guards a file with no final newline. To rotate the token, replace the old lines instead of appending again. Edit `~/.npmrc` directly: `pnpm config set --global` can write to pnpm's own `auth.ini` instead.
 
   ```bash
-  printf '@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' '<your-PAT>' >> ~/.npmrc
+  read -rs PAT && printf '\n@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' "$PAT" >> ~/.npmrc && unset PAT
   ```
 
 - **CI:** the `Authenticate to GitHub Packages` step in `.github/workflows/ci.yml` writes both lines, taking the token from the `NODE_AUTH_TOKEN` repository secret.
@@ -30,11 +30,11 @@ The repo has no `.npmrc`. Every environment supplies both lines itself:
 
 `NPM_RC` has two lines. The interactive `vercel env add` prompt keeps only the first line, which drops the token and gives a 401 on install. Set it one of these ways:
 
-- In the Vercel dashboard, paste both lines into the value field.
-- Pipe the value on stdin:
+- **Team-shared var (the normal case):** in the Vercel dashboard, team **Settings → Environment Variables**, paste both lines into the value field. The CLI cannot edit a shared var.
+- **Project-only var:** pipe the value on stdin. `vercel env add` takes one environment per call, so run it for `production` and again for `preview`. Add `--force` to overwrite an existing value.
 
   ```bash
-  printf '@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' "$TOKEN" | vercel env add NPM_RC production
+  read -rs PAT && printf '@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' "$PAT" | vercel env add NPM_RC production --sensitive && unset PAT
   ```
 
 Never commit the token or paste it into a file in the repo.

@@ -49,10 +49,10 @@ cp .env.example .env.local
 
 ### 2. Authenticate to GitHub Packages
 
-The design system (`@elirobinson/tokens`, `@elirobinson/react`) installs from a private registry, so pnpm needs the `@elirobinson` scope mapped to GitHub Packages and a GitHub PAT with `read:packages`. Put both lines in `~/.npmrc`, once per machine:
+The design system (`@elirobinson/tokens`, `@elirobinson/react`) installs from a private registry, so pnpm needs the `@elirobinson` scope mapped to GitHub Packages and a GitHub PAT with `read:packages`. Put both lines in `~/.npmrc`, once per machine. Paste the PAT at the silent prompt:
 
 ```bash
-printf '@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' '<your-github-pat>' >> ~/.npmrc
+read -rs PAT && printf '\n@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' "$PAT" >> ~/.npmrc && unset PAT
 ```
 
 This writes to `~/.npmrc`, outside the repo — it is not part of `.env.local`, and it is not a per-shell export. The repo has no `.npmrc` of its own. CI and Vercel supply the same two lines; see [docs/agents/environment.md](docs/agents/environment.md).
