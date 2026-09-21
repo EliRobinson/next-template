@@ -8,13 +8,36 @@ All env vars are declared and validated in `src/env.ts` (`@t3-oss/env-nextjs` + 
 
 ## GitHub Packages token
 
-Installing or updating any `@elirobinson/*` package needs a GitHub PAT with `read:packages`. The repo `.npmrc` carries no credential. Set yours once at the user level:
+Installing or updating any `@elirobinson/*` package needs two npm config lines: the scope mapping and a GitHub PAT with `read:packages`.
 
-```bash
-pnpm config set "//npm.pkg.github.com/:_authToken" <your-PAT> --global
+```
+@elirobinson:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=<token>
 ```
 
-CI writes the `NODE_AUTH_TOKEN` repository secret into the runner's `~/.npmrc` in an `Authenticate to GitHub Packages` step before installing.
+The repo has no `.npmrc`. Every environment supplies both lines itself:
+
+- **Local:** put both lines in `~/.npmrc`, once per machine. Edit the file directly: `pnpm config set --global` writes to pnpm's own `auth.ini` instead.
+
+  ```bash
+  printf '@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' '<your-PAT>' >> ~/.npmrc
+  ```
+
+- **CI:** the `Authenticate to GitHub Packages` step in `.github/workflows/ci.yml` writes both lines, taking the token from the `NODE_AUTH_TOKEN` repository secret.
+- **Vercel:** the team-shared env var `NPM_RC` holds both lines. Vercel writes `NPM_RC` into the build's npm config before it installs, so a project needs no `vercel.json` or install command. A new project only has to be linked to `NPM_RC` (team **Settings → Environment Variables**, or tick the project when you edit the shared var).
+
+### Adding or rotating `NPM_RC`
+
+`NPM_RC` has two lines. The interactive `vercel env add` prompt keeps only the first line, which drops the token and gives a 401 on install. Set it one of these ways:
+
+- In the Vercel dashboard, paste both lines into the value field.
+- Pipe the value on stdin:
+
+  ```bash
+  printf '@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' "$TOKEN" | vercel env add NPM_RC production
+  ```
+
+Never commit the token or paste it into a file in the repo.
 
 ## Database (optional)
 

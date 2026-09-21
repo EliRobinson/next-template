@@ -24,6 +24,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # The repo has no .npmrc, so this step writes both lines: the @elirobinson
+      # scope mapping and the token. Vercel gets the same two lines from the
+      # team-shared NPM_RC env var instead (docs/agents/environment.md).
+      #
       # `pnpm config set`, not an echo into ~/.npmrc, so this keeps working after a
       # pnpm major. pnpm 11 keeps its own credential store and sends tokens only
       # from there: a token in ~/.npmrc is still listed back in pnpm's own
@@ -42,6 +46,7 @@ jobs:
                  "(a GitHub token with read:packages)."
             exit 1
           fi
+          pnpm config set @elirobinson:registry https://npm.pkg.github.com
           pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
@@ -71,6 +76,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # The repo has no .npmrc, so this step writes both lines: the @elirobinson
+      # scope mapping and the token. Vercel gets the same two lines from the
+      # team-shared NPM_RC env var instead (docs/agents/environment.md).
+      #
       # `pnpm config set`, not an echo into ~/.npmrc, so this keeps working after a
       # pnpm major. pnpm 11 keeps its own credential store and sends tokens only
       # from there: a token in ~/.npmrc is still listed back in pnpm's own
@@ -89,6 +98,7 @@ jobs:
                  "(a GitHub token with read:packages)."
             exit 1
           fi
+          pnpm config set @elirobinson:registry https://npm.pkg.github.com
           pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
@@ -120,6 +130,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      # The repo has no .npmrc, so this step writes both lines: the @elirobinson
+      # scope mapping and the token. Vercel gets the same two lines from the
+      # team-shared NPM_RC env var instead (docs/agents/environment.md).
+      #
       # `pnpm config set`, not an echo into ~/.npmrc, so this keeps working after a
       # pnpm major. pnpm 11 keeps its own credential store and sends tokens only
       # from there: a token in ~/.npmrc is still listed back in pnpm's own
@@ -138,6 +152,7 @@ jobs:
                  "(a GitHub token with read:packages)."
             exit 1
           fi
+          pnpm config set @elirobinson:registry https://npm.pkg.github.com
           pnpm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}

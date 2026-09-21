@@ -49,13 +49,13 @@ cp .env.example .env.local
 
 ### 2. Authenticate to GitHub Packages
 
-The design system (`@elirobinson/tokens`, `@elirobinson/react`) installs from a private registry, so pnpm needs a GitHub PAT with `read:packages`. Set it once, at the user level:
+The design system (`@elirobinson/tokens`, `@elirobinson/react`) installs from a private registry, so pnpm needs the `@elirobinson` scope mapped to GitHub Packages and a GitHub PAT with `read:packages`. Put both lines in `~/.npmrc`, once per machine:
 
 ```bash
-pnpm config set "//npm.pkg.github.com/:_authToken" <your-github-pat> --global
+printf '@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' '<your-github-pat>' >> ~/.npmrc
 ```
 
-This writes to `~/.npmrc`, outside the repo — it is not part of `.env.local`, and it is not a per-shell export. The repo's own `.npmrc` maps the `@elirobinson` scope to the registry and carries no credential, because pnpm 10+ ignores credentials in a committed project `.npmrc`.
+This writes to `~/.npmrc`, outside the repo — it is not part of `.env.local`, and it is not a per-shell export. The repo has no `.npmrc` of its own. CI and Vercel supply the same two lines; see [docs/agents/environment.md](docs/agents/environment.md).
 
 ### 3. Install dependencies
 
@@ -106,7 +106,6 @@ fixed port 3000, set independently in `playwright.config.ts` and the E2E job in 
 │   └── workflows/ci.yml      # CI pipeline
 ├── .husky/                   # Git hooks
 ├── AGENTS.md                 # AI agent guide (CLAUDE.md symlinks here)
-├── .npmrc                    # @elirobinson scope → GitHub Packages registry
 └── components.json           # shadcn/ui config (fallback)
 ```
 
