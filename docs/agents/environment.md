@@ -23,7 +23,7 @@ The repo has no `.npmrc`. Every environment supplies both lines itself:
   read -rs PAT && printf '\n@elirobinson:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=%s\n' "$PAT" >> ~/.npmrc && unset PAT
   ```
 
-- **CI:** the `Authenticate to GitHub Packages` step in `.github/workflows/ci.yml` writes both lines, taking the token from the `NODE_AUTH_TOKEN` repository secret.
+- **CI:** the `Authenticate to GitHub Packages` step in `.github/actions/setup/action.yml` writes both lines, taking the token from the `NODE_AUTH_TOKEN` repository secret.
 - **Vercel:** the team-shared env var `NPM_RC` holds both lines. Vercel writes `NPM_RC` into the build's npm config before it installs, so a project needs no `vercel.json` or install command. A new project only has to be linked to `NPM_RC` (team **Settings → Environment Variables**, or tick the project when you edit the shared var).
 
 ### Adding or rotating `NPM_RC`
