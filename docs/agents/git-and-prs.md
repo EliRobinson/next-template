@@ -24,9 +24,9 @@ Husky hooks live in `.husky/`. Never bypass them (`--no-verify`). If a hook fail
 
 ## Review gate (before a PR is opened)
 
-Four reviewers run in parallel on the branch diff. None of them edits code.
+Four reviewers run in parallel on the branch diff. None of them edits code. Reviewers run on Opus, Sonnet, or Haiku only. Never use Fable for a reviewer; it costs too many tokens.
 
-1. **Thermonuclear code-quality review** (Fable 5.1, the `code-quality-review` skill). Covers maintainability, abstractions, and file size.
+1. **Thermonuclear code-quality review** (Opus, the `code-quality-review` skill). Covers maintainability, abstractions, and file size.
 2. **Correctness critic** (Opus). Covers edge cases, error paths, concurrency, data correctness, and whether the tests would catch a regression.
 3. **Spec, security, and copy critic** (Sonnet). Checks conformance with `CONTEXT.md` and `docs/adr/`, the security rules (auth, input validation, secrets, XSS), and every user-facing string, using the `copywriting` skill and the "UI copy" rules in `AGENTS.md`.
 4. **DRY critic** (Opus). Hunts duplication: repeated literals and constants, near-duplicate functions, parallel structures that should be one parametrized thing, hand-written types that duplicate generated ones, and the same rule written in two places. It also names abstractions to leave alone, where two things look alike but change for different reasons.
