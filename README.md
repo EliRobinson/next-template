@@ -74,7 +74,7 @@ so concurrent worktrees or projects never race for the same one. `.claude/launch
 detects the actual bound port (`autoPort: true`) rather than assuming a fixed one.
 
 `pnpm test:e2e` is unaffected: it runs a production server (`next start`) on a
-fixed port 3000, set independently in `playwright.config.ts` and the E2E job in CI.
+fixed port, `PORT` in `playwright.config.ts`.
 
 ---
 
