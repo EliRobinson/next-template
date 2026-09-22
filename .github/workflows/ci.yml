@@ -1,10 +1,10 @@
 name: CI
 
+# Auto-run disabled: GitHub Actions billing issue.
+# Checks moved to .husky/pre-push. Run manually via "Run workflow" once billing is fixed,
+# then restore the push/pull_request triggers below.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
