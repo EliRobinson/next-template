@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Agent|Task|mcp__.*create_pull_request.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/review-gate.mjs\" --agent=claude"
+          }
+        ]
+      }
+    ]
+  }
+}

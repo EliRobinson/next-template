@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__.*create_pull_request.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/review-gate.mjs\" --agent=codex",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

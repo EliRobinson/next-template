@@ -289,13 +289,21 @@ GitHub Actions runs on every push and pull request to `main`. See [`.github/work
 | `unit`    | `vitest run --coverage`, uploads coverage artifact |
 | `e2e`     | Playwright on Chromium against a production build  |
 
-Set up branch protection on `main` to require all three jobs before merging.
+GitHub does not copy branch rules into a repo made from a template. Run this once in each new repo to require all three jobs on `main`:
+
+```bash
+gh api -X POST "repos/{owner}/{repo}/rulesets" --input .github/rulesets/main.json
+```
+
+Rulesets on a private repo need a paid GitHub plan.
 
 ---
 
 ## AI agents
 
 [`AGENTS.md`](AGENTS.md) (symlinked as `CLAUDE.md`) documents conventions for AI agents working in this repo: stack decisions, coding rules, test strategy, and commit standards. Update it as your project evolves.
+
+Before an agent opens a PR, it must run the [review gate](docs/agents/git-and-prs.md#review-gate-before-a-pr-is-opened): four read-only reviewers from the shared skill in [`.agents/skills/review-gate/`](.agents/skills/review-gate/SKILL.md). A hook in each AI tool (Claude Code, Codex, Gemini CLI, Cursor, Copilot) runs [`scripts/agent-hooks/review-gate.mjs`](scripts/agent-hooks/review-gate.mjs) and blocks the PR until its body has a filled `## Review` section. It works in every repo made from this template with no setup.
 
 Design-system-first behavior is reinforced across every surface an agent might read, so you get it whichever tool you use:
 

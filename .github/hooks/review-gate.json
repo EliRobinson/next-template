@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "node \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/review-gate.mjs\" --agent=copilot",
+        "matcher": "bash",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}
