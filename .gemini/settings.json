@@ -5,7 +5,7 @@
   "hooks": {
     "BeforeTool": [
       {
-        "matcher": "run_shell_command",
+        "matcher": "run_shell_command|mcp_.*create_pull_request.*",
         "hooks": [
           {
             "type": "command",

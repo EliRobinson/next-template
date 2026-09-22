@@ -1,6 +1,6 @@
 ---
 name: review-correctness
-description: Pre-PR review gate, reviewer 2 of 4. Correctness critic for the branch diff. Covers edge cases, error paths, concurrency, data correctness, and test coverage of regressions. Read-only. Run it with the other three reviewers before opening a PR.
+description: Pre-PR review gate reviewer. Correctness critic for the branch diff. Covers edge cases, error paths, concurrency, data correctness, and test coverage of regressions. Read-only. Run it with the other review-gate reviewers before opening a PR.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

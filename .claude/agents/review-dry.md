@@ -1,6 +1,6 @@
 ---
 name: review-dry
-description: Pre-PR review gate, reviewer 4 of 4. DRY critic for the branch diff. Hunts duplication and names abstractions to leave alone. Read-only. Run it with the other three reviewers before opening a PR.
+description: Pre-PR review gate reviewer. DRY critic for the branch diff. Hunts duplication and names abstractions to leave alone. Read-only. Run it with the other review-gate reviewers before opening a PR.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---
