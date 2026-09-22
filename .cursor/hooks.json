@@ -3,8 +3,12 @@
   "hooks": {
     "beforeShellExecution": [
       {
-        "command": "node \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/review-gate.mjs\" --agent=cursor",
-        "matcher": "gh\\s"
+        "command": "node \"$CURSOR_PROJECT_DIR/scripts/agent-hooks/review-gate.mjs\" --agent=cursor"
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "node \"$CURSOR_PROJECT_DIR/scripts/agent-hooks/review-gate.mjs\" --agent=cursor"
       }
     ]
   }
