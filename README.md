@@ -303,7 +303,7 @@ Rulesets on a private repo need a paid GitHub plan.
 
 [`AGENTS.md`](AGENTS.md) (symlinked as `CLAUDE.md`) documents conventions for AI agents working in this repo: stack decisions, coding rules, test strategy, and commit standards. Update it as your project evolves.
 
-Before an agent opens a PR, it must run the [review gate](docs/agents/git-and-prs.md#review-gate-before-a-pr-is-opened): four read-only reviewers from the shared skill in [`.agents/skills/review-gate/`](.agents/skills/review-gate/SKILL.md). A hook in each supported AI tool (see [docs/agents/git-and-prs.md](docs/agents/git-and-prs.md#how-the-gate-is-enforced)) runs [`scripts/agent-hooks/review-gate.mjs`](scripts/agent-hooks/review-gate.mjs) and blocks the PR until its body has a filled `## Review` section. It works in every repo made from this template with no setup.
+Before an agent opens a PR, it must run the [review gate](docs/agents/git-and-prs.md#review-gate-before-a-pr-is-opened): read-only reviewers from the shared skill in [`.agents/skills/review-gate/`](.agents/skills/review-gate/SKILL.md). A hook in each supported AI tool enforces it, with no setup in repos made from this template.
 
 Design-system-first behavior is reinforced across every surface an agent might read, so you get it whichever tool you use:
 

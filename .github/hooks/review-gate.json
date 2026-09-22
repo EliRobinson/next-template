@@ -5,7 +5,7 @@
       {
         "type": "command",
         "bash": "node \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)/scripts/agent-hooks/review-gate.mjs\" --agent=copilot",
-        "matcher": "bash|.*create_pull_request.*",
+        "matcher": "bash|.*create_pull_request",
         "timeoutSec": 30
       }
     ]

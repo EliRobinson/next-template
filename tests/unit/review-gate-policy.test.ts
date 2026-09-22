@@ -3,10 +3,13 @@ import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   REVIEWERS,
+  TOOLS,
+  branchRefsOf,
   countsAsRun,
   decidePr,
   decideReviewerStart,
   findPrCommands,
+  isMcpCreatePr,
   prCommandsOf,
   reviewersWithoutRun,
   unfilledReviewLabels
@@ -37,7 +40,10 @@ describe('findPrCommands: detects PR-opening commands', () => {
     ['full path', `/opt/homebrew/bin/${CREATE} -F b.md`],
     ['after a here-string', `grep -q x <<< foo\n${CREATE} --fill`],
     ['after a quoted <<', `echo "a <<Z"\n${CREATE} --fill`],
-    ['help=false', `${CREATE} --help=false --fill`]
+    ['help=false', `${CREATE} --help=false --fill`],
+    ['repo flag before pr', `${GH} -R o/r pr create -F b.md`],
+    ['in a function', `function f { ${CREATE} -F b.md; }; f`],
+    ['after arithmetic with a shift', `(( n = 1 << 2 ))\n${CREATE} --fill`]
   ])('%s', (_, script) => {
     expect(kinds(script)).toEqual(['pr-create'])
   })
@@ -47,6 +53,8 @@ describe('findPrCommands: detects PR-opening commands', () => {
     ['attached field values', `${GH} api repos/o/r/pulls -ftitle=x -fhead=b`],
     ['explicit POST', `${GH} api -X POST repos/o/r/pulls --input body.json`],
     ['method flag', `${GH} api --method=post /repos/o/r/pulls`],
+    ['full URL', `${GH} api https://api.github.com/repos/o/r/pulls -f title=x`],
+    ['attached method', `${GH} api -XPOST repos/o/r/pulls`],
     [
       'inline graphql mutation',
       `${GH} api graphql -f query='mutation{createPullRequest(input:{}){clientMutationId}}'`
@@ -108,6 +116,8 @@ describe('findPrCommands: reads pr create flags', () => {
       base: 'dev'
     })
     expect(first(`${CREATE} -Fb.md`)).toMatchObject({ bodyFile: 'b.md' })
+    expect(first(`${CREATE} -dF b.md`)).toMatchObject({ bodyFile: 'b.md' })
+    expect(first(`${CREATE} -F b.md --head=0`)).toMatchObject({ head: '0' })
   })
 
   it('does not read a flag out of a flag value', () => {
@@ -123,17 +133,78 @@ describe('findPrCommands: reads pr create flags', () => {
     expect(first(`${CREATE} -f`)).toMatchObject({ fill: true })
     expect(first(`${CREATE} --fill-first`)).toMatchObject({ fill: true })
     expect(first(`${CREATE} -w`)).toMatchObject({ web: true })
+    expect(first(`${CREATE} -fw`)).toMatchObject({ fill: true, web: true })
     expect(first(`${CREATE} -F b.md --fill=false`)).toMatchObject({
       fill: false
     })
   })
 
-  it('tracks the directory a literal cd moves to', () => {
-    expect(first(`cd a && cd b/c && ${CREATE} -F ../x.md`)).toMatchObject({
-      dir: 'a/b/c'
+  it('tracks the directory the leading cd commands move to', () => {
+    const dir = (script: string) =>
+      (first(script) as { dir?: string | null }).dir
+    expect(dir(`cd a && cd b/c && ${CREATE} -F ../x.md`)).toBe('a/b/c')
+    expect(dir(`cd /abs/repo && ${CREATE} -F x.md`)).toBe('/abs/repo')
+    expect(dir(`cd a && cd /abs && cd b && ${CREATE} -F x.md`)).toBe('/abs/b')
+  })
+
+  it('does not follow a cd in a subshell, a substitution, or after another command', () => {
+    const dir = (script: string) =>
+      (first(script) as { dir?: string | null }).dir
+    expect(dir(`(cd sub && ls); ${CREATE} -F b.md`)).toBeUndefined()
+    expect(dir(`echo $(${CREATE} -F b.md); cd sub`)).toBeUndefined()
+    expect(dir(`ls && cd sub && ${CREATE} -F b.md`)).toBeUndefined()
+  })
+
+  it('marks a cd it cannot follow as unknown', () => {
+    const dir = (script: string) =>
+      (first(script) as { dir?: string | null }).dir
+    expect(dir(`cd "$DIR" && ${CREATE} -F x.md`)).toBeNull()
+    expect(dir(`cd "$DIR" && cd sub && ${CREATE} -F x.md`)).toBeNull()
+    expect(dir(`cd - && ${CREATE} -F x.md`)).toBeNull()
+  })
+})
+
+describe('isMcpCreatePr', () => {
+  it.each([
+    'mcp__github__create_pull_request',
+    'mcp_github_create_pull_request',
+    'github-mcp-server-create_pull_request',
+    'create_pull_request'
+  ])('matches %s', (name) => {
+    expect(isMcpCreatePr(name)).toBe(true)
+  })
+
+  it.each([
+    'mcp__github__create_pull_request_review',
+    'mcp__github__get_pull_request'
+  ])('does not match %s', (name) => {
+    expect(isMcpCreatePr(name)).toBe(false)
+  })
+})
+
+describe('branchRefsOf', () => {
+  it('strips an owner prefix from the head and tries the base, then main', () => {
+    expect(
+      branchRefsOf({
+        kind: 'pr-create',
+        fill: false,
+        web: false,
+        head: 'me:feat',
+        base: 'dev',
+        dir: 'sub'
+      })
+    ).toEqual({
+      head: 'feat',
+      baseRefs: ['origin/dev', 'origin/main'],
+      dir: 'sub'
     })
-    expect(first(`cd "$DIR" && ${CREATE} -F x.md`)).toMatchObject({
-      dir: undefined
+  })
+
+  it('falls back to origin/HEAD and the working directory', () => {
+    expect(branchRefsOf({ kind: 'mcp-create', body: '' })).toEqual({
+      head: undefined,
+      baseRefs: ['origin/HEAD', 'origin/main'],
+      dir: '.'
     })
   })
 })
@@ -186,8 +257,10 @@ describe('unfilledReviewLabels', () => {
   })
 })
 
+const SKILL_DIR = '.agents/skills/review-gate/'
+
 describe('reviewer list stays in step', () => {
-  const skill = readFileSync('.agents/skills/review-gate/SKILL.md', 'utf8')
+  const skill = readFileSync(`${SKILL_DIR}SKILL.md`, 'utf8')
 
   it('matches the PR template labels', () => {
     const template = readFileSync('.github/pull_request_template.md', 'utf8')
@@ -201,11 +274,9 @@ describe('reviewer list stays in step', () => {
     (agent, { label }) => {
       const file = readFileSync(`.claude/agents/${agent}.md`, 'utf8')
       const model = /^model:\s*(\S+)/m.exec(file)?.[1]
-      const prompt =
-        /`(\.agents\/skills\/review-gate\/reviewers\/[\w-]+\.md)`/.exec(
-          file
-        )?.[1]
+      const prompt = /`([^`]*reviewers\/[\w-]+\.md)`/.exec(file)?.[1]
       expect(model).toMatch(/^(opus|sonnet|haiku)$/)
+      expect(prompt?.startsWith(SKILL_DIR)).toBe(true)
       expect(prompt && existsSync(prompt)).toBe(true)
 
       const row = skill
@@ -213,9 +284,90 @@ describe('reviewer list stays in step', () => {
         .find((line) => line.includes(`\`${agent}\``))
       expect(row).toContain(`| ${label} `)
       expect(row).toContain(`| ${model} `)
-      expect(row).toContain(prompt?.replace('.agents/skills/review-gate/', ''))
+      expect(row).toContain(prompt?.replace(SKILL_DIR, ''))
     }
   )
+})
+
+describe('hook configs stay in step with the tool table', () => {
+  // Each config's matchers, tried the way Copilot does: anchored at both ends.
+  const matches = (matcher: string | undefined, name: string) =>
+    matcher === undefined || new RegExp(`^(?:${matcher})$`).test(name)
+  const configs = [
+    {
+      tool: 'claude',
+      file: '.claude/settings.json',
+      event: 'PreToolUse',
+      mcp: 'mcp__github__create_pull_request'
+    },
+    {
+      tool: 'codex',
+      file: '.codex/hooks.json',
+      event: 'PreToolUse',
+      mcp: 'mcp__github__create_pull_request'
+    },
+    {
+      tool: 'gemini',
+      file: '.gemini/settings.json',
+      event: 'BeforeTool',
+      mcp: 'mcp_github_create_pull_request'
+    },
+    {
+      tool: 'cursor',
+      file: '.cursor/hooks.json',
+      event: 'beforeShellExecution',
+      mcp: undefined
+    },
+    {
+      tool: 'copilot',
+      file: '.github/hooks/review-gate.json',
+      event: 'preToolUse',
+      mcp: 'github-create_pull_request'
+    }
+  ] as const
+
+  it('covers every tool in the table', () => {
+    expect(configs.map(({ tool }) => tool).sort()).toEqual(
+      Object.keys(TOOLS).sort()
+    )
+  })
+
+  it.each(configs)(
+    '$file routes its shell and MCP calls to --agent=$tool',
+    ({ tool, file, event, mcp }) => {
+      const entries: Array<{
+        matcher?: string
+        command?: string
+        bash?: string
+        hooks?: Array<{ command: string }>
+      }> = JSON.parse(readFileSync(file, 'utf8')).hooks[event]
+      const commands = entries.flatMap(
+        (entry) =>
+          entry.hooks?.map((hook) => hook.command) ?? [
+            entry.command ?? entry.bash ?? ''
+          ]
+      )
+      for (const command of commands)
+        expect(command).toContain(`--agent=${tool}`)
+      for (const name of [...TOOLS[tool].shellTools, ...(mcp ? [mcp] : [])]) {
+        expect(entries.some((entry) => matches(entry.matcher, name))).toBe(true)
+      }
+    }
+  )
+
+  it('Claude Code routes Agent calls and every reviewer finish to the hook', () => {
+    const hooks = JSON.parse(
+      readFileSync('.claude/settings.json', 'utf8')
+    ).hooks
+    expect(matches(hooks.PreToolUse[0].matcher, 'Agent')).toBe(true)
+    for (const agent of agents)
+      expect(matches(hooks.SubagentStop[0].matcher, agent)).toBe(true)
+  })
+
+  it('Cursor routes MCP calls to the hook', () => {
+    const hooks = JSON.parse(readFileSync('.cursor/hooks.json', 'utf8')).hooks
+    expect(hooks.beforeMCPExecution[0].command).toContain('--agent=cursor')
+  })
 })
 
 describe('countsAsRun', () => {
@@ -236,44 +388,21 @@ describe('reviewersWithoutRun', () => {
   const order = ['base', 'a', 'b']
   const isAncestor = (commit: string, of: string) =>
     order.includes(commit) && order.indexOf(commit) <= order.indexOf(of)
+  const onB = { head: 'b', base: 'base', isAncestor }
   const allRanOn = (head: string) =>
     Object.fromEntries(agents.map((agent) => [agent, { head }]))
 
   it('counts runs on the head or an earlier branch commit', () => {
-    expect(
-      reviewersWithoutRun(allRanOn('b'), {
-        head: 'b',
-        base: 'base',
-        isAncestor
-      })
-    ).toEqual([])
-    expect(
-      reviewersWithoutRun(allRanOn('a'), {
-        head: 'b',
-        base: 'base',
-        isAncestor
-      })
-    ).toEqual([])
+    expect(reviewersWithoutRun(allRanOn('b'), onB)).toEqual([])
+    expect(reviewersWithoutRun(allRanOn('a'), onB)).toEqual([])
   })
 
   it('drops runs on a commit that is not on the branch', () => {
-    expect(
-      reviewersWithoutRun(allRanOn('gone'), {
-        head: 'b',
-        base: 'base',
-        isAncestor
-      })
-    ).toEqual(agents)
+    expect(reviewersWithoutRun(allRanOn('gone'), onB)).toEqual(agents)
   })
 
   it('drops runs made before the branch had its own commits', () => {
-    expect(
-      reviewersWithoutRun(allRanOn('base'), {
-        head: 'b',
-        base: 'base',
-        isAncestor
-      })
-    ).toEqual(agents)
+    expect(reviewersWithoutRun(allRanOn('base'), onB)).toEqual(agents)
   })
 
   it('names only the reviewers that are missing', () => {
@@ -337,6 +466,19 @@ describe('decidePr', () => {
     ['stdin body', { ...pr, bodyFile: '-' }]
   ])('denies %s', (_, command) => {
     expect(decidePr(command, deps)).not.toBeNull()
+  })
+
+  it('denies a relative path after a cd it cannot follow', () => {
+    expect(decidePr({ ...pr, dir: null }, deps)?.deny).toMatch(/absolute path/)
+    expect(
+      decidePr({ ...pr, dir: null, bodyFile: '/abs/b.md' }, deps)
+    ).toBeNull()
+    const files = {
+      kind: 'graphql-files' as const,
+      files: ['m.graphql'],
+      dir: null
+    }
+    expect(decidePr(files, deps)?.deny).toMatch(/absolute path/)
   })
 
   it('denies a missing body file', () => {

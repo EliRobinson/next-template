@@ -52,7 +52,7 @@ const finishAllReviewers = () => {
     expect(run('claude', stop(agent)).code).toBe(0)
 }
 const openPr = (flags = '') =>
-  run('claude', bash(`${CREATE} -F body.md ${flags}`)).code
+  run('claude', bash(`${CREATE} -F body.md ${flags}`))
 
 beforeEach(() => {
   repo = mkdtempSync(join(tmpdir(), 'review-gate-'))
@@ -71,12 +71,12 @@ afterEach(() => {
 
 describe('Claude Code', () => {
   it('blocks the PR until every reviewer has finished on the branch', () => {
-    const first = run('claude', bash(`${CREATE} -F body.md`))
+    const first = openPr()
     expect(first.code).toBe(2)
     for (const { agent } of REVIEWERS) expect(first.stderr).toContain(agent)
 
     finishAllReviewers()
-    expect(openPr()).toBe(0)
+    expect(openPr().code).toBe(0)
   })
 
   it('records reviewers that finish at the same moment', async () => {
@@ -90,13 +90,13 @@ describe('Claude Code', () => {
           })
       )
     )
-    expect(openPr()).toBe(0)
+    expect(openPr().code).toBe(0)
   })
 
   it('does not count a reviewer that returned nothing', () => {
     for (const { agent } of REVIEWERS)
       run('claude', stop(agent, agent === 'review-dry' ? '' : 'ok'))
-    const result = run('claude', bash(`${CREATE} -F body.md`))
+    const result = openPr()
     expect(result.code).toBe(2)
     expect(result.stderr).toMatch(/review-dry/)
   })
@@ -104,20 +104,20 @@ describe('Claude Code', () => {
   it('keeps branch runs apart, even for names that look alike', () => {
     finishAllReviewers()
     git('checkout', '-q', '-b', 'feat_x')
-    expect(openPr()).toBe(2)
+    expect(openPr().code).toBe(2)
   })
 
   it('still counts runs after fix commits', () => {
     finishAllReviewers()
     git('commit', '-q', '--allow-empty', '-m', 'fix a finding')
-    expect(openPr()).toBe(0)
+    expect(openPr().code).toBe(0)
   })
 
   it('drops runs made before the branch had its own commits', () => {
     git('checkout', '-q', '-b', 'fresh', 'main')
     finishAllReviewers()
     git('commit', '-q', '--allow-empty', '-m', 'work')
-    expect(openPr()).toBe(2)
+    expect(openPr().code).toBe(2)
   })
 
   it('drops runs from a branch that was deleted and recreated', () => {
@@ -126,16 +126,16 @@ describe('Claude Code', () => {
     git('branch', '-q', '-D', 'feat/x')
     git('checkout', '-q', '-b', 'feat/x')
     git('commit', '-q', '--allow-empty', '-m', 'new work')
-    expect(openPr()).toBe(2)
+    expect(openPr().code).toBe(2)
   })
 
   it('checks the runs of the --head branch against the --base branch', () => {
     finishAllReviewers()
     git('update-ref', 'refs/remotes/origin/dev', 'feat/x')
     git('checkout', '-q', '-b', 'other')
-    expect(openPr('--head feat/x')).toBe(0)
-    expect(openPr('--head feat/x --base dev')).toBe(2)
-    expect(openPr()).toBe(2)
+    expect(openPr('--head feat/x').code).toBe(0)
+    expect(openPr('--head feat/x --base dev').code).toBe(2)
+    expect(openPr().code).toBe(2)
   })
 
   it('resolves the body file after a leading cd', () => {
@@ -144,6 +144,18 @@ describe('Claude Code', () => {
     expect(run('claude', bash(`cd sub && ${CREATE} -F ../body.md`)).code).toBe(
       0
     )
+  })
+
+  it('follows a leading cd to an absolute path', () => {
+    finishAllReviewers()
+    expect(run('claude', bash(`cd ${repo} && ${CREATE} -F body.md`)).code).toBe(
+      0
+    )
+    const elsewhere = run('claude', {
+      ...bash(`cd ${repo} && ${CREATE} -F body.md`),
+      cwd: '/'
+    })
+    expect(elsewhere.code).toBe(0)
   })
 
   it('blocks a reviewer started with a model override', () => {
@@ -167,6 +179,15 @@ describe('Claude Code', () => {
       }).code
     expect(mcp('')).toBe(2)
     expect(mcp(filledReview())).toBe(0)
+  })
+
+  it('does not block MCP tools that only review a PR', () => {
+    const review = run('claude', {
+      tool_name: 'mcp__github__create_pull_request_review',
+      tool_input: { body: 'LGTM' },
+      cwd: repo
+    })
+    expect(review.code).toBe(0)
   })
 
   it('reads graphql query files', () => {
@@ -196,6 +217,7 @@ describe('other tools check the body only', () => {
       run('codex', { tool_name: 'Bash', tool_input: { command }, cwd: repo })
         .code
     expect(argv(['bash', '-lc', `${CREATE} -F empty.md`])).toBe(2)
+    expect(argv(['bash', '-lc', `cd ${repo} && ${CREATE} -F body.md`])).toBe(0)
     writeFileSync(join(repo, 'my body.md'), filledReview())
     expect(argv([GH, 'pr', 'create', '-F', 'my body.md'])).toBe(0)
   })

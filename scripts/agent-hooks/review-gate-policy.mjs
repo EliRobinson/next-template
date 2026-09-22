@@ -5,7 +5,7 @@
 
 import { posix } from 'node:path'
 
-import { basename, parseCommands } from './shell-parse.mjs'
+import { parseCommands } from './shell-parse.mjs'
 
 /** The reviewers, in the order the PR template lists them. */
 export const REVIEWERS = /** @type {const} */ ([
@@ -18,12 +18,36 @@ export const REVIEWERS = /** @type {const} */ ([
 /** @typedef {(typeof REVIEWERS)[number]['agent']} ReviewerAgent */
 
 /**
- * A call that opens a PR. `dir` is where a leading `cd` moved the shell,
- * relative to the hook's working directory.
- * @typedef {{ kind: 'pr-create', bodyFile?: string, fill: boolean, web: boolean, head?: string, base?: string, dir?: string }
+ * The AI tools the hook supports, keyed by the `--agent` value each tool's
+ * hook config passes. `shellTools` are the tool names that run shell
+ * commands. Only Claude Code runs the reviewer agents, so only it tracks
+ * reviewer runs. A test checks every hook config against this table.
+ */
+export const TOOLS = /** @type {const} */ ({
+  claude: { shellTools: ['Bash'], tracksReviewers: true },
+  codex: { shellTools: ['Bash'], tracksReviewers: false },
+  gemini: { shellTools: ['run_shell_command'], tracksReviewers: false },
+  cursor: { shellTools: [], tracksReviewers: false },
+  copilot: { shellTools: ['bash'], tracksReviewers: false }
+})
+
+/**
+ * Whether an MCP tool name is a create-PR tool, such as
+ * `mcp__github__create_pull_request`. `create_pull_request_review` is not.
+ * @param {string} name
+ */
+export function isMcpCreatePr(name) {
+  return /(^|[_-])create_pull_request$/i.test(name)
+}
+
+/**
+ * A call that opens a PR. `dir` is where leading `cd` commands moved the
+ * shell, relative to the hook's working directory, or null when a `cd`
+ * went somewhere the hook cannot tell, such as `cd "$DIR"`.
+ * @typedef {{ kind: 'pr-create', bodyFile?: string, fill: boolean, web: boolean, head?: string, base?: string, dir?: string | null }
  *   | { kind: 'mcp-create', body: string, head?: string, base?: string }
  *   | { kind: 'api-create' }
- *   | { kind: 'graphql-files', files: string[], dir?: string }} PrCommand
+ *   | { kind: 'graphql-files', files: string[], dir?: string | null }} PrCommand
  */
 
 /**
@@ -37,8 +61,9 @@ export const REVIEWERS = /** @type {const} */ ([
 // ---- Flags ----
 
 /**
- * Reads flags from argv. `--flag=value`, `-fvalue`, and `-f value` all
- * work for flags in `valueFlags`. `--flag=false` counts as not set.
+ * Reads flags from argv. A value flag takes `--flag=value`, `--flag value`,
+ * `-fvalue`, or `-f value`. Short flags can be bundled, as in `-dw` or
+ * `-dF body.md`. A boolean flag set to `false` or `0` counts as not set.
  * @param {string[]} args
  * @param {Set<string>} valueFlags
  */
@@ -52,20 +77,23 @@ function readFlags(args, valueFlags) {
   }
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] ?? ''
-    const eq = arg.startsWith('--') ? arg.indexOf('=') : -1
-    if (eq !== -1) {
-      const value = arg.slice(eq + 1)
-      if (!/^(false|0)$/i.test(value)) add(arg.slice(0, eq), value)
-    } else if (valueFlags.has(arg)) {
-      add(arg, args[++i] ?? '')
-    } else if (
-      /^-[^-]/.test(arg) &&
-      arg.length > 2 &&
-      valueFlags.has(arg.slice(0, 2))
-    ) {
-      add(arg.slice(0, 2), arg.slice(2))
-    } else if (arg.startsWith('-') && arg !== '-') {
-      add(arg, 'true')
+    if (arg.startsWith('--')) {
+      const eq = arg.indexOf('=')
+      const name = eq === -1 ? arg : arg.slice(0, eq)
+      if (valueFlags.has(name))
+        add(name, eq === -1 ? (args[++i] ?? '') : arg.slice(eq + 1))
+      else if (eq === -1 || !/^(false|0)$/i.test(arg.slice(eq + 1)))
+        add(name, 'true')
+    } else if (arg.startsWith('-') && arg.length > 1) {
+      for (let k = 1; k < arg.length; k++) {
+        const flag = `-${arg[k]}`
+        if (valueFlags.has(flag)) {
+          const rest = arg.slice(k + 1)
+          add(flag, rest === '' ? (args[++i] ?? '') : rest)
+          break
+        }
+        add(flag, 'true')
+      }
     } else {
       positional.push(arg)
     }
@@ -79,32 +107,39 @@ function readFlags(args, valueFlags) {
   }
 }
 
+/**
+ * The args after any leading flags, skipping the values of `valueFlags`.
+ * @param {string[]} args
+ * @param {Set<string>} valueFlags
+ */
+function afterFlags(args, valueFlags) {
+  let i = 0
+  while (args[i]?.startsWith('-')) i += valueFlags.has(args[i] ?? '') ? 2 : 1
+  return args.slice(i)
+}
+
+/**
+ * @param {string} longNames  space-separated, without the `--`
+ * @param {string[]} shortFlags
+ */
+function flagSet(longNames, shortFlags) {
+  return new Set([
+    ...longNames.split(' ').map((name) => `--${name}`),
+    ...shortFlags
+  ])
+}
+
 // ---- gh commands ----
 
-const PR_CREATE_VALUE_FLAGS = new Set(
-  'title body body-file base head assignee label milestone project reviewer repo template recover'
-    .split(' ')
-    .map((name) => `--${name}`)
-    .concat([
-      '-t',
-      '-b',
-      '-F',
-      '-B',
-      '-H',
-      '-a',
-      '-l',
-      '-m',
-      '-p',
-      '-r',
-      '-R',
-      '-T'
-    ])
+const PR_CREATE_VALUE_FLAGS = flagSet(
+  'title body body-file base head assignee label milestone project reviewer repo template recover',
+  ['-t', '-b', '-F', '-B', '-H', '-a', '-l', '-m', '-p', '-r', '-R', '-T']
 )
-const PR_GROUP_VALUE_FLAGS = new Set(['-R', '--repo'])
+const REPO_FLAGS = flagSet('repo', ['-R'])
 
 /**
  * @param {string[]} args  argv after `gh pr create`
- * @param {string | undefined} dir
+ * @param {string | null | undefined} dir
  * @returns {PrCommand | null}
  */
 function classifyPrCreate(args, dir) {
@@ -121,17 +156,16 @@ function classifyPrCreate(args, dir) {
   }
 }
 
-const API_VALUE_FLAGS = new Set(
-  'method raw-field field header input jq template cache preview hostname'
-    .split(' ')
-    .map((name) => `--${name}`)
-    .concat(['-X', '-f', '-F', '-H', '-q', '-t', '-p'])
+const API_VALUE_FLAGS = flagSet(
+  'method raw-field field header input jq template cache preview hostname',
+  ['-X', '-f', '-F', '-H', '-q', '-t', '-p']
 )
-const PULLS_ENDPOINT = /^\/?repos\/[^/]+\/[^/]+\/pulls\/?(\?.*)?$/
+const PULLS_ENDPOINT =
+  /^(https?:\/\/[^/]+\/(api\/v3\/)?)?\/?repos\/[^/]+\/[^/]+\/pulls\/?(\?.*)?$/
 
 /**
  * @param {string[]} args  argv after `gh api`
- * @param {string | undefined} dir
+ * @param {string | null | undefined} dir
  * @returns {PrCommand | null}
  */
 function classifyApi(args, dir) {
@@ -159,27 +193,45 @@ function classifyApi(args, dir) {
 }
 
 /**
- * The PR-opening commands in a shell script, if any.
+ * Where `cd <target>` moves the shell from `dir`, or null when the hook
+ * cannot tell.
+ * @param {string} dir
+ * @param {string | undefined} target
+ * @returns {string | null}
+ */
+function cdInto(dir, target) {
+  if (target === undefined || target === '-' || /[$~`]/.test(target))
+    return null
+  return target.startsWith('/')
+    ? posix.normalize(target)
+    : posix.join(dir, target)
+}
+
+/**
+ * The PR-opening commands in a shell script, if any. Only a leading run of
+ * top-level `cd` commands moves `dir`; a `cd` in a subshell or after
+ * another command does not.
  * @param {string} script
  * @returns {PrCommand[]}
  */
 export function findPrCommands(script) {
   /** @type {PrCommand[]} */
   const found = []
-  /** @type {string | undefined} */
+  /** @type {string | null | undefined} */
   let dir
-  for (const argv of parseCommands(script)) {
-    const [name, group, ...rest] = argv
-    if (name === 'cd') {
-      const target = group ?? '~'
-      dir = /[$~`]/.test(target) ? undefined : posix.join(dir ?? '.', target)
+  let leading = true
+  for (const { argv, top } of parseCommands(script)) {
+    if (leading && top && argv[0] === 'cd') {
+      dir = dir === null ? null : cdInto(dir ?? '.', argv[1])
       continue
     }
-    if (basename(name ?? '') !== 'gh') continue
+    if (top) leading = false
+    if (posix.basename(argv[0] ?? '') !== 'gh') continue
+    const [group, ...rest] = afterFlags(argv.slice(1), REPO_FLAGS)
     if (group === 'pr') {
-      const sub = readFlags(rest, PR_GROUP_VALUE_FLAGS).positional[0]
+      const [sub, ...subArgs] = afterFlags(rest, REPO_FLAGS)
       if (sub === 'create' || sub === 'new') {
-        const pr = classifyPrCreate(rest.slice(rest.indexOf(sub) + 1), dir)
+        const pr = classifyPrCreate(subArgs, dir)
         if (pr) found.push(pr)
       }
     } else if (group === 'api') {
@@ -241,6 +293,27 @@ export function unfilledReviewLabels(markdown) {
 // ---- Reviewer runs ----
 
 /**
+ * The refs to check reviewer runs against: the PR's head branch (without an
+ * `owner:` prefix), the base refs to try in order, and the directory to run
+ * git in.
+ * @param {PrCommand} pr
+ * @returns {{ head?: string, baseRefs: string[], dir: string | null }}
+ */
+export function branchRefsOf(pr) {
+  if (pr.kind === 'api-create' || pr.kind === 'graphql-files') {
+    return {
+      baseRefs: [],
+      dir: pr.kind === 'graphql-files' ? (pr.dir ?? '.') : '.'
+    }
+  }
+  return {
+    head: pr.head?.replace(/^[^:]+:/, ''),
+    baseRefs: [`origin/${pr.base ?? 'HEAD'}`, 'origin/main'],
+    dir: pr.kind === 'pr-create' ? (pr.dir ?? '.') : '.'
+  }
+}
+
+/**
  * Whether a finished subagent counts as a reviewer run: it is a reviewer,
  * and it returned a report.
  * @param {unknown} agent
@@ -284,14 +357,18 @@ const REVIEW_FORMAT =
  * command's directory and returns null for a missing file. Tools that do
  * not track reviewer runs pass `reviewersNotRun: () => []`.
  * @param {PrCommand} pr
- * @param {{ readFile: (path: string) => string | null, reviewersNotRun: () => string[] }} deps
+ * @param {{ readFile: (path: string) => string | null, reviewersNotRun: () => ReviewerAgent[] }} deps
  * @returns {Decision}
  */
 export function decidePr(pr, { readFile, reviewersNotRun }) {
   if (pr.kind === 'api-create') {
     return { deny: 'Open PRs with `gh pr create --body-file`, not `gh api`.' }
   }
+  const relative = (/** @type {string} */ path) => !path.startsWith('/')
+  const unknownDir =
+    'The hook cannot tell which directory a `cd` moved to. Pass an absolute path, or drop the `cd`.'
   if (pr.kind === 'graphql-files') {
+    if (pr.dir === null && pr.files.some(relative)) return { deny: unknownDir }
     const creates = pr.files.some((file) =>
       readFile(file)?.includes('createPullRequest')
     )
@@ -313,6 +390,8 @@ export function decidePr(pr, { readFile, reviewersNotRun }) {
     return {
       deny: 'Write the PR body to a file first, in its own step. Then run `gh pr create --body-file <path>`.'
     }
+  } else if (pr.dir === null && relative(pr.bodyFile)) {
+    return { deny: unknownDir }
   } else {
     body = readFile(pr.bodyFile)
     if (body === null) {

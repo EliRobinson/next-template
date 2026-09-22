@@ -1,6 +1,6 @@
 ---
 name: review-spec
-description: Pre-PR review gate reviewer. Spec, security, and copy critic for the branch diff. Checks CONTEXT.md and docs/adr conformance, security rules, and every user-facing string. Read-only. Run it with the other review-gate reviewers before opening a PR.
+description: Pre-PR review gate reviewer, the spec, security, and copy critic. Read-only. Run it with the other review-gate reviewers before opening a PR.
 tools: Read, Grep, Glob, Bash, Skill
 model: sonnet
 ---

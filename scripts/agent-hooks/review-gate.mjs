@@ -14,9 +14,12 @@ import { join, resolve } from 'node:path'
 
 import {
   REVIEWERS,
+  TOOLS,
+  branchRefsOf,
   countsAsRun,
   decidePr,
   decideReviewerStart,
+  isMcpCreatePr,
   prCommandsOf,
   reviewersWithoutRun
 } from './review-gate-policy.mjs'
@@ -24,13 +27,14 @@ import { quoteArgv, shellScriptOf } from './shell-parse.mjs'
 
 /** @typedef {import('./review-gate-policy.mjs').PrCall} PrCall */
 /** @typedef {import('./review-gate-policy.mjs').PrCommand} PrCommand */
+/** @typedef {keyof typeof TOOLS} ToolName */
 
 /**
  * @typedef {PrCall
  *   | { kind: 'agent-start', input: Record<string, unknown> }
  *   | { kind: 'agent-stop', agent: unknown, output: unknown }
  *   | { kind: 'other' }} Call
- * @typedef {{ toCall: (event: any) => Call, deny: (message: string) => never, tracksReviewers?: boolean }} Adapter
+ * @typedef {{ toCall: (event: any) => Call, deny: (message: string) => never }} Adapter
  */
 
 // ---- Tool adapters ----
@@ -55,15 +59,15 @@ function commandText(command) {
 }
 
 /**
+ * @param {ToolName} tool
  * @param {unknown} name
  * @param {any} input
- * @param {string[]} shellTools
  * @returns {Call}
  */
-function toolCall(name, input, shellTools) {
+function toolCall(tool, name, input) {
   if (typeof name !== 'string') return { kind: 'other' }
-  if (/create_pull_request/i.test(name))
-    return { kind: 'mcp', input: input ?? {} }
+  if (isMcpCreatePr(name)) return { kind: 'mcp', input: input ?? {} }
+  const shellTools = /** @type {readonly string[]} */ (TOOLS[tool].shellTools)
   if (shellTools.includes(name))
     return { kind: 'shell', command: commandText(input?.command) }
   return { kind: 'other' }
@@ -81,10 +85,9 @@ function jsonDeny(output) {
   process.exit(0)
 }
 
-/** @type {Record<string, Adapter>} */
+/** @type {Record<ToolName, Adapter>} */
 const ADAPTERS = {
   claude: {
-    tracksReviewers: true,
     toCall(event) {
       if (event.hook_event_name === 'SubagentStop') {
         return {
@@ -96,23 +99,22 @@ const ADAPTERS = {
       if (event.tool_name === 'Agent' || event.tool_name === 'Task') {
         return { kind: 'agent-start', input: event.tool_input ?? {} }
       }
-      return toolCall(event.tool_name, event.tool_input, ['Bash'])
+      return toolCall('claude', event.tool_name, event.tool_input)
     },
     deny: exitDeny
   },
   codex: {
-    toCall: (event) => toolCall(event.tool_name, event.tool_input, ['Bash']),
+    toCall: (event) => toolCall('codex', event.tool_name, event.tool_input),
     deny: exitDeny
   },
   gemini: {
-    toCall: (event) =>
-      toolCall(event.tool_name, event.tool_input, ['run_shell_command']),
+    toCall: (event) => toolCall('gemini', event.tool_name, event.tool_input),
     deny: exitDeny
   },
   cursor: {
     toCall: (event) =>
       event.tool_name
-        ? toolCall(event.tool_name, parseJson(event.tool_input), [])
+        ? toolCall('cursor', event.tool_name, parseJson(event.tool_input))
         : { kind: 'shell', command: commandText(event.command) },
     deny: (message) =>
       jsonDeny({
@@ -123,7 +125,7 @@ const ADAPTERS = {
   },
   copilot: {
     toCall: (event) =>
-      toolCall(event.toolName, parseJson(event.toolArgs), ['bash']),
+      toolCall('copilot', event.toolName, parseJson(event.toolArgs)),
     deny: (message) =>
       jsonDeny({
         permissionDecision: 'deny',
@@ -209,13 +211,11 @@ function recordRun(cwd, agent, output) {
 
 /** @param {PrCommand} pr @param {string} cwd */
 function reviewersNotRun(pr, cwd) {
-  const head = 'head' in pr ? pr.head?.replace(/^[^:]+:/, '') : undefined
+  const { head, baseRefs } = branchRefsOf(pr)
   const branch = head ?? currentBranch(cwd)
-  const base = 'base' in pr ? pr.base : undefined
   return reviewersWithoutRun(branch ? readRuns(cwd, branch) : {}, {
     head: branch && commitOf(cwd, branch),
-    base:
-      commitOf(cwd, `origin/${base ?? 'HEAD'}`) ?? commitOf(cwd, 'origin/main'),
+    base: baseRefs.map((ref) => commitOf(cwd, ref)).find(Boolean) ?? null,
     isAncestor: (commit, of) =>
       tryGit(cwd, 'merge-base', '--is-ancestor', commit, of) !== null
   })
@@ -240,36 +240,41 @@ function block(adapter, message) {
   return adapter.deny(`Blocked by the review gate. ${message}`)
 }
 
-/** @param {PrCommand} pr @param {string} cwd @param {Adapter} adapter */
-function checkPr(pr, cwd, adapter) {
-  const dir = resolve(cwd, 'dir' in pr ? (pr.dir ?? '.') : '.')
+/** @param {PrCommand} pr @param {string} cwd @param {ToolName} tool */
+function checkPr(pr, cwd, tool) {
+  const dir = resolve(cwd, branchRefsOf(pr).dir ?? '.')
   let decision
   try {
     decision = decidePr(pr, {
       readFile: (path) => readFile(path, dir),
       reviewersNotRun: () =>
-        adapter.tracksReviewers ? reviewersNotRun(pr, dir) : []
+        TOOLS[tool].tracksReviewers ? reviewersNotRun(pr, dir) : []
     })
   } catch (error) {
     decision = {
       deny: `The hook failed: ${error instanceof Error ? error.message : error}.`
     }
   }
-  if (decision) block(adapter, decision.deny)
+  if (decision) block(ADAPTERS[tool], decision.deny)
+}
+
+/** @param {string} name @returns {name is ToolName} */
+function isTool(name) {
+  return Object.hasOwn(TOOLS, name)
 }
 
 function main() {
   const flag = '--agent='
-  const name = (process.argv.find((arg) => arg.startsWith(flag)) ?? '').slice(
+  const tool = (process.argv.find((arg) => arg.startsWith(flag)) ?? '').slice(
     flag.length
   )
-  const adapter = ADAPTERS[name]
-  if (!adapter) {
+  if (!isTool(tool)) {
     process.stderr.write(
-      `review-gate: unknown --agent "${name}". Use one of: ${Object.keys(ADAPTERS).join(', ')}.\n`
+      `review-gate: unknown --agent "${tool}". Use one of: ${Object.keys(TOOLS).join(', ')}.\n`
     )
     process.exit(1)
   }
+  const adapter = ADAPTERS[tool]
 
   let event
   try {
@@ -287,7 +292,7 @@ function main() {
   } else if (call.kind === 'agent-stop') {
     recordRun(cwd, call.agent, call.output)
   } else if (call.kind === 'shell' || call.kind === 'mcp') {
-    for (const pr of prCommandsOf(call)) checkPr(pr, cwd, adapter)
+    for (const pr of prCommandsOf(call)) checkPr(pr, cwd, tool)
   }
 }
 
