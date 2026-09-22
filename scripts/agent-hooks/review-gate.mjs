@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 // Entry for the pre-PR review gate hook. See docs/agents/git-and-prs.md.
 // Usage: node review-gate.mjs --agent=<claude|codex|gemini|cursor|copilot>
 //
@@ -7,27 +8,34 @@
 // blocks it.
 
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 
 import {
   REVIEWERS,
+  countsAsRun,
   decidePr,
   decideReviewerStart,
-  findPrCommands
+  prCommandsOf,
+  reviewersWithoutRun
 } from './review-gate-policy.mjs'
+import { quoteArgv, shellScriptOf } from './shell-parse.mjs'
+
+/** @typedef {import('./review-gate-policy.mjs').PrCall} PrCall */
+/** @typedef {import('./review-gate-policy.mjs').PrCommand} PrCommand */
+
+/**
+ * @typedef {PrCall
+ *   | { kind: 'agent-start', input: Record<string, unknown> }
+ *   | { kind: 'agent-stop', agent: unknown, output: unknown }
+ *   | { kind: 'other' }} Call
+ * @typedef {{ toCall: (event: any) => Call, deny: (message: string) => never, tracksReviewers?: boolean }} Adapter
+ */
 
 // ---- Tool adapters ----
-//
-// Each adapter turns its tool's stdin event into a call, and writes a denial
-// in the format that tool reads. A call is one of:
-//   { kind: 'shell', command, cwd }        a shell command
-//   { kind: 'mcp', input, cwd }            an MCP create_pull_request call
-//   { kind: 'agent-start', input, cwd }    Claude Code starting a subagent
-//   { kind: 'agent-stop', agent, output, cwd }  a Claude Code subagent finished
-//   { kind: 'other' }
 
+/** @param {unknown} value */
 function parseJson(value) {
   if (typeof value !== 'string') return value ?? {}
   try {
@@ -37,37 +45,43 @@ function parseJson(value) {
   }
 }
 
-// Codex has sent shell commands as argv arrays; take the script out of
-// `bash -lc <script>` or join the words.
+// Codex has sent shell commands as argv arrays.
+/** @param {unknown} command */
 function commandText(command) {
   if (typeof command === 'string') return command
   if (!Array.isArray(command)) return ''
-  const flag = command.findIndex(
-    (arg, i) => i > 0 && /^-[a-z]*c[a-z]*$/.test(arg)
-  )
-  return flag !== -1 && command[flag + 1] !== undefined
-    ? command[flag + 1]
-    : command.join(' ')
+  const argv = command.map(String)
+  return shellScriptOf(argv) ?? quoteArgv(argv)
 }
 
-function toolCall(name, input, cwd, shellNames) {
-  if (/create_pull_request/i.test(name ?? ''))
-    return { kind: 'mcp', input: input ?? {}, cwd }
-  if (shellNames.includes(name))
-    return { kind: 'shell', command: commandText(input?.command), cwd }
+/**
+ * @param {unknown} name
+ * @param {any} input
+ * @param {string[]} shellTools
+ * @returns {Call}
+ */
+function toolCall(name, input, shellTools) {
+  if (typeof name !== 'string') return { kind: 'other' }
+  if (/create_pull_request/i.test(name))
+    return { kind: 'mcp', input: input ?? {} }
+  if (shellTools.includes(name))
+    return { kind: 'shell', command: commandText(input?.command) }
   return { kind: 'other' }
 }
 
+/** @param {string} message @returns {never} */
 function exitDeny(message) {
   process.stderr.write(`${message}\n`)
   process.exit(2)
 }
 
+/** @param {object} output @returns {never} */
 function jsonDeny(output) {
   process.stdout.write(JSON.stringify(output))
   process.exit(0)
 }
 
+/** @type {Record<string, Adapter>} */
 const ADAPTERS = {
   claude: {
     tracksReviewers: true,
@@ -76,49 +90,30 @@ const ADAPTERS = {
         return {
           kind: 'agent-stop',
           agent: event.agent_type,
-          output: event.last_assistant_message,
-          cwd: event.cwd
+          output: event.last_assistant_message
         }
       }
       if (event.tool_name === 'Agent' || event.tool_name === 'Task') {
-        return {
-          kind: 'agent-start',
-          input: event.tool_input ?? {},
-          cwd: event.cwd
-        }
+        return { kind: 'agent-start', input: event.tool_input ?? {} }
       }
-      return toolCall(event.tool_name, event.tool_input, event.cwd, ['Bash'])
+      return toolCall(event.tool_name, event.tool_input, ['Bash'])
     },
     deny: exitDeny
   },
   codex: {
-    toCall: (event) =>
-      toolCall(event.tool_name, event.tool_input, event.cwd, ['Bash']),
+    toCall: (event) => toolCall(event.tool_name, event.tool_input, ['Bash']),
     deny: exitDeny
   },
   gemini: {
     toCall: (event) =>
-      toolCall(event.tool_name, event.tool_input, event.cwd, [
-        'run_shell_command'
-      ]),
+      toolCall(event.tool_name, event.tool_input, ['run_shell_command']),
     deny: exitDeny
   },
   cursor: {
-    toCall(event) {
-      if (event.tool_name) {
-        return toolCall(
-          event.tool_name,
-          parseJson(event.tool_input),
-          event.cwd,
-          []
-        )
-      }
-      return {
-        kind: 'shell',
-        command: commandText(event.command),
-        cwd: event.cwd
-      }
-    },
+    toCall: (event) =>
+      event.tool_name
+        ? toolCall(event.tool_name, parseJson(event.tool_input), [])
+        : { kind: 'shell', command: commandText(event.command) },
     deny: (message) =>
       jsonDeny({
         permission: 'deny',
@@ -128,7 +123,7 @@ const ADAPTERS = {
   },
   copilot: {
     toCall: (event) =>
-      toolCall(event.toolName, parseJson(event.toolArgs), event.cwd, ['bash']),
+      toolCall(event.toolName, parseJson(event.toolArgs), ['bash']),
     deny: (message) =>
       jsonDeny({
         permissionDecision: 'deny',
@@ -137,117 +132,137 @@ const ADAPTERS = {
   }
 }
 
-// ---- Git and reviewer runs ----
+// ---- Git ----
 
-function git(cwd, ...args) {
-  return execFileSync('git', args, {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore']
-  }).trim()
-}
-
+/** @param {string} cwd @param {string[]} args */
 function tryGit(cwd, ...args) {
   try {
-    return git(cwd, ...args)
+    return execFileSync('git', args, {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim()
   } catch {
     return null
   }
 }
 
-function isAncestor(cwd, commit, of) {
-  return tryGit(cwd, 'merge-base', '--is-ancestor', commit, of) !== null
+/** @param {string} cwd @param {string} ref */
+function commitOf(cwd, ref) {
+  return tryGit(cwd, 'rev-parse', '--verify', '--quiet', `${ref}^{commit}`)
 }
 
+/** @param {string} cwd */
 function currentBranch(cwd) {
-  const branch = tryGit(cwd, 'symbolic-ref', '--quiet', '--short', 'HEAD')
-  return branch || null
+  return tryGit(cwd, 'symbolic-ref', '--quiet', '--short', 'HEAD') || null
 }
 
-function runsFile(cwd, branch) {
-  const gitDir = resolve(cwd, git(cwd, 'rev-parse', '--git-common-dir'))
-  return join(gitDir, 'review-gate', `${encodeURIComponent(branch)}.json`)
+// ---- Reviewer runs ----
+//
+// One file per reviewer, at .git/review-gate/<branch>/<agent>.json, written
+// through a rename, so reviewers that finish at once do not overwrite each
+// other.
+
+/** @param {string} cwd @param {string} branch */
+function runsDir(cwd, branch) {
+  const gitDir = tryGit(cwd, 'rev-parse', '--git-common-dir')
+  return (
+    gitDir &&
+    join(resolve(cwd, gitDir), 'review-gate', encodeURIComponent(branch))
+  )
 }
 
+/** @param {string} cwd @param {string} branch */
 function readRuns(cwd, branch) {
-  try {
-    return JSON.parse(readFileSync(runsFile(cwd, branch), 'utf8'))
-  } catch {
-    return {}
+  const dir = runsDir(cwd, branch)
+  /** @type {Record<string, { head?: string }>} */
+  const runs = {}
+  for (const { agent } of REVIEWERS) {
+    try {
+      if (dir)
+        runs[agent] = JSON.parse(
+          readFileSync(join(dir, `${agent}.json`), 'utf8')
+        )
+    } catch {
+      // No run yet.
+    }
   }
+  return runs
 }
 
-// Records a reviewer when it finishes with a report. A reviewer that errors
-// out or returns nothing does not count.
-function recordRun({ agent, output, cwd }) {
-  if (!REVIEWERS.some((reviewer) => reviewer.agent === agent)) return
-  if (typeof output !== 'string' || output.trim() === '') return
+/** @param {string} cwd @param {unknown} agent @param {unknown} output */
+function recordRun(cwd, agent, output) {
+  if (!countsAsRun(agent, output)) return
   const branch = currentBranch(cwd)
   const head = tryGit(cwd, 'rev-parse', 'HEAD')
-  if (!branch || !head) return
-  const file = runsFile(cwd, branch)
-  const runs = readRuns(cwd, branch)
-  runs[agent] = { head, at: new Date().toISOString() }
-  mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(file, `${JSON.stringify(runs, null, 2)}\n`)
+  const dir = branch && runsDir(cwd, branch)
+  if (!dir || !head) return
+  mkdirSync(dir, { recursive: true })
+  const file = join(dir, `${agent}.json`)
+  const temp = `${file}.${process.pid}.tmp`
+  writeFileSync(
+    temp,
+    `${JSON.stringify({ head, at: new Date().toISOString() }, null, 2)}\n`
+  )
+  renameSync(temp, file)
 }
 
-// A run counts when its commit is on the PR branch and newer than the base.
-// Fix commits made after the review still count.
+/** @param {PrCommand} pr @param {string} cwd */
 function reviewersNotRun(pr, cwd) {
-  const all = REVIEWERS.map(({ agent }) => agent)
-  const branch = pr.head?.replace(/^[^:]+:/, '') ?? currentBranch(cwd)
-  const head =
-    branch &&
-    tryGit(cwd, 'rev-parse', '--verify', '--quiet', `${branch}^{commit}`)
-  if (!branch || !head) return all
-  const base =
-    tryGit(
-      cwd,
-      'rev-parse',
-      '--verify',
-      '--quiet',
-      `origin/${pr.base ?? 'HEAD'}^{commit}`
-    ) ?? tryGit(cwd, 'rev-parse', '--verify', '--quiet', 'origin/main^{commit}')
-  const runs = readRuns(cwd, branch)
-  return all.filter((agent) => {
-    const run = runs[agent]
-    if (!run?.head || !isAncestor(cwd, run.head, head)) return true
-    return base !== null && run.head !== head && isAncestor(cwd, run.head, base)
+  const head = 'head' in pr ? pr.head?.replace(/^[^:]+:/, '') : undefined
+  const branch = head ?? currentBranch(cwd)
+  const base = 'base' in pr ? pr.base : undefined
+  return reviewersWithoutRun(branch ? readRuns(cwd, branch) : {}, {
+    head: branch && commitOf(cwd, branch),
+    base:
+      commitOf(cwd, `origin/${base ?? 'HEAD'}`) ?? commitOf(cwd, 'origin/main'),
+    isAncestor: (commit, of) =>
+      tryGit(cwd, 'merge-base', '--is-ancestor', commit, of) !== null
   })
-}
-
-// ---- Body files ----
-
-function bodyOf(pr, cwd) {
-  const path = pr.bodyFile.replace(/^~(?=\/|$)/, homedir())
-  try {
-    return readFileSync(resolve(cwd, path), 'utf8')
-  } catch {
-    return { missing: pr.bodyFile }
-  }
 }
 
 // ---- Main ----
 
-function checkPr(pr, call, adapter) {
+/** @param {string} path @param {string} dir */
+function readFile(path, dir) {
+  try {
+    return readFileSync(
+      resolve(dir, path.replace(/^~(?=\/|$)/, homedir())),
+      'utf8'
+    )
+  } catch {
+    return null
+  }
+}
+
+/** @param {Adapter} adapter @param {string} message @returns {never} */
+function block(adapter, message) {
+  return adapter.deny(`Blocked by the review gate. ${message}`)
+}
+
+/** @param {PrCommand} pr @param {string} cwd @param {Adapter} adapter */
+function checkPr(pr, cwd, adapter) {
+  const dir = resolve(cwd, 'dir' in pr ? (pr.dir ?? '.') : '.')
   let decision
   try {
     decision = decidePr(pr, {
-      bodyOf: (command) => bodyOf(command, call.cwd),
-      reviewersNotRun: (command) =>
-        adapter.tracksReviewers ? reviewersNotRun(command, call.cwd) : null
+      readFile: (path) => readFile(path, dir),
+      reviewersNotRun: () =>
+        adapter.tracksReviewers ? reviewersNotRun(pr, dir) : []
     })
   } catch (error) {
-    decision = { deny: `The review gate hook failed: ${error.message}` }
+    decision = {
+      deny: `The hook failed: ${error instanceof Error ? error.message : error}.`
+    }
   }
-  if (decision) adapter.deny(`Blocked by the review gate. ${decision.deny}`)
+  if (decision) block(adapter, decision.deny)
 }
 
 function main() {
-  const name = (
-    process.argv.find((arg) => arg.startsWith('--agent=')) ?? ''
-  ).slice(8)
+  const flag = '--agent='
+  const name = (process.argv.find((arg) => arg.startsWith(flag)) ?? '').slice(
+    flag.length
+  )
   const adapter = ADAPTERS[name]
   if (!adapter) {
     process.stderr.write(
@@ -263,38 +278,16 @@ function main() {
     return
   }
   if (!event || typeof event !== 'object') return
+  const cwd = typeof event.cwd === 'string' ? event.cwd : process.cwd()
   const call = adapter.toCall(event)
-  call.cwd ??= process.cwd()
 
   if (call.kind === 'agent-start') {
     const decision = decideReviewerStart(call.input)
-    if (decision) adapter.deny(`Blocked by the review gate. ${decision.deny}`)
+    if (decision) block(adapter, decision.deny)
   } else if (call.kind === 'agent-stop') {
-    try {
-      recordRun(call)
-    } catch {
-      // The PR check reports the missing run.
-    }
-  } else if (call.kind === 'mcp') {
-    const { body, head, base } = call.input
-    checkPr(
-      { kind: 'mcp-create', body: String(body ?? ''), head, base },
-      call,
-      adapter
-    )
-  } else if (call.kind === 'shell') {
-    let prs
-    try {
-      prs = findPrCommands(call.command)
-    } catch {
-      if (/\bgh\b[\s\S]*\b(pr|api)\b/.test(call.command)) {
-        adapter.deny(
-          'Blocked by the review gate. The hook could not parse this `gh` command.'
-        )
-      }
-      return
-    }
-    for (const pr of prs) checkPr(pr, call, adapter)
+    recordRun(cwd, call.agent, call.output)
+  } else if (call.kind === 'shell' || call.kind === 'mcp') {
+    for (const pr of prCommandsOf(call)) checkPr(pr, cwd, adapter)
   }
 }
 

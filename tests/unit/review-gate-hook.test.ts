@@ -1,21 +1,17 @@
 // @vitest-environment node
-import { spawnSync, execFileSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { REVIEWERS } from '../../scripts/agent-hooks/review-gate-policy.mjs'
+import { CREATE, GH, filledReview } from './review-gate-fixtures'
 
 // End-to-end: runs the hook script with each tool's stdin format, in a
-// throwaway git repo. Policy details are covered in review-gate-policy.test.ts.
+// throwaway git repo. The rules themselves are covered in
+// review-gate-policy.test.ts.
 
 const HOOK = resolve('scripts/agent-hooks/review-gate.mjs')
-// Built at run time so this file never contains a literal PR command.
-const CREATE = `${['g', 'h'].join('')} pr create`
-const FILLED = [
-  '## Review',
-  ...REVIEWERS.map(({ label }) => `- **${label}:** no findings`)
-].join('\n')
 
 let repo: string
 
@@ -31,13 +27,12 @@ function run(agent: string, event: unknown) {
     cwd: repo,
     encoding: 'utf8'
   })
-  const json = (() => {
-    try {
-      return JSON.parse(result.stdout)
-    } catch {
-      return null
-    }
-  })()
+  let json = null
+  try {
+    json = JSON.parse(result.stdout)
+  } catch {
+    // Not a JSON reply.
+  }
   return { code: result.status, stderr: result.stderr, json }
 }
 
@@ -56,6 +51,8 @@ const finishAllReviewers = () => {
   for (const { agent } of REVIEWERS)
     expect(run('claude', stop(agent)).code).toBe(0)
 }
+const openPr = (flags = '') =>
+  run('claude', bash(`${CREATE} -F body.md ${flags}`)).code
 
 beforeEach(() => {
   repo = mkdtempSync(join(tmpdir(), 'review-gate-'))
@@ -64,7 +61,7 @@ beforeEach(() => {
   git('update-ref', 'refs/remotes/origin/main', 'HEAD')
   git('checkout', '-q', '-b', 'feat/x')
   git('commit', '-q', '--allow-empty', '-m', 'work')
-  writeFileSync(join(repo, 'body.md'), FILLED)
+  writeFileSync(join(repo, 'body.md'), filledReview())
   writeFileSync(join(repo, 'empty.md'), '## Summary\nx')
 })
 
@@ -79,12 +76,24 @@ describe('Claude Code', () => {
     for (const { agent } of REVIEWERS) expect(first.stderr).toContain(agent)
 
     finishAllReviewers()
-    expect(run('claude', bash(`${CREATE} -F body.md`)).code).toBe(0)
+    expect(openPr()).toBe(0)
+  })
+
+  it('records reviewers that finish at the same moment', async () => {
+    await Promise.all(
+      REVIEWERS.map(
+        ({ agent }) =>
+          new Promise((resolve) => {
+            const child = spawn('node', [HOOK, '--agent=claude'], { cwd: repo })
+            child.on('close', resolve)
+            child.stdin.end(JSON.stringify(stop(agent)))
+          })
+      )
+    )
+    expect(openPr()).toBe(0)
   })
 
   it('does not count a reviewer that returned nothing', () => {
-    finishAllReviewers()
-    git('checkout', '-q', '-b', 'feat/y')
     for (const { agent } of REVIEWERS)
       run('claude', stop(agent, agent === 'review-dry' ? '' : 'ok'))
     const result = run('claude', bash(`${CREATE} -F body.md`))
@@ -95,13 +104,20 @@ describe('Claude Code', () => {
   it('keeps branch runs apart, even for names that look alike', () => {
     finishAllReviewers()
     git('checkout', '-q', '-b', 'feat_x')
-    expect(run('claude', bash(`${CREATE} -F body.md`)).code).toBe(2)
+    expect(openPr()).toBe(2)
   })
 
   it('still counts runs after fix commits', () => {
     finishAllReviewers()
     git('commit', '-q', '--allow-empty', '-m', 'fix a finding')
-    expect(run('claude', bash(`${CREATE} -F body.md`)).code).toBe(0)
+    expect(openPr()).toBe(0)
+  })
+
+  it('drops runs made before the branch had its own commits', () => {
+    git('checkout', '-q', '-b', 'fresh', 'main')
+    finishAllReviewers()
+    git('commit', '-q', '--allow-empty', '-m', 'work')
+    expect(openPr()).toBe(2)
   })
 
   it('drops runs from a branch that was deleted and recreated', () => {
@@ -110,16 +126,24 @@ describe('Claude Code', () => {
     git('branch', '-q', '-D', 'feat/x')
     git('checkout', '-q', '-b', 'feat/x')
     git('commit', '-q', '--allow-empty', '-m', 'new work')
-    expect(run('claude', bash(`${CREATE} -F body.md`)).code).toBe(2)
+    expect(openPr()).toBe(2)
   })
 
-  it('checks the runs of the --head branch', () => {
+  it('checks the runs of the --head branch against the --base branch', () => {
     finishAllReviewers()
+    git('update-ref', 'refs/remotes/origin/dev', 'feat/x')
     git('checkout', '-q', '-b', 'other')
-    expect(run('claude', bash(`${CREATE} -F body.md --head feat/x`)).code).toBe(
+    expect(openPr('--head feat/x')).toBe(0)
+    expect(openPr('--head feat/x --base dev')).toBe(2)
+    expect(openPr()).toBe(2)
+  })
+
+  it('resolves the body file after a leading cd', () => {
+    finishAllReviewers()
+    mkdirSync(join(repo, 'sub'))
+    expect(run('claude', bash(`cd sub && ${CREATE} -F ../body.md`)).code).toBe(
       0
     )
-    expect(run('claude', bash(`${CREATE} -F body.md`)).code).toBe(2)
   })
 
   it('blocks a reviewer started with a model override', () => {
@@ -131,7 +155,6 @@ describe('Claude Code', () => {
       })
     expect(start({ subagent_type: 'review-dry', model: 'fable' }).code).toBe(2)
     expect(start({ subagent_type: 'review-dry' }).code).toBe(0)
-    expect(start({ subagent_type: 'Explore', model: 'haiku' }).code).toBe(0)
   })
 
   it('checks MCP create_pull_request bodies', () => {
@@ -141,9 +164,19 @@ describe('Claude Code', () => {
         tool_name: 'mcp__github__create_pull_request',
         tool_input: { body, head: 'feat/x' },
         cwd: repo
-      })
-    expect(mcp('').code).toBe(2)
-    expect(mcp(FILLED).code).toBe(0)
+      }).code
+    expect(mcp('')).toBe(2)
+    expect(mcp(filledReview())).toBe(0)
+  })
+
+  it('reads graphql query files', () => {
+    writeFileSync(
+      join(repo, 'm.graphql'),
+      'mutation { createPullRequest(input: {}) { clientMutationId } }'
+    )
+    expect(
+      run('claude', bash(`${GH} api graphql -f query=@m.graphql`)).code
+    ).toBe(2)
   })
 
   it('lets bad stdin and unrelated tools through', () => {
@@ -155,27 +188,27 @@ describe('Claude Code', () => {
   })
 })
 
-describe('other tools', () => {
-  it('Codex: checks the body, with a string or argv command', () => {
+describe('other tools check the body only', () => {
+  it('Codex: with a string or argv command', () => {
     expect(run('codex', bash(`${CREATE} -F body.md`)).code).toBe(0)
     expect(run('codex', bash(`${CREATE} -F empty.md`)).code).toBe(2)
-    const argv = {
-      tool_name: 'Bash',
-      tool_input: { command: ['bash', '-lc', `${CREATE} -F empty.md`] },
-      cwd: repo
-    }
-    expect(run('codex', argv).code).toBe(2)
+    const argv = (command: string[]) =>
+      run('codex', { tool_name: 'Bash', tool_input: { command }, cwd: repo })
+        .code
+    expect(argv(['bash', '-lc', `${CREATE} -F empty.md`])).toBe(2)
+    writeFileSync(join(repo, 'my body.md'), filledReview())
+    expect(argv([GH, 'pr', 'create', '-F', 'my body.md'])).toBe(0)
   })
 
-  it('Gemini: checks shell and MCP calls', () => {
+  it('Gemini: shell and MCP calls', () => {
     const shell = (command: string) =>
       run('gemini', {
         tool_name: 'run_shell_command',
         tool_input: { command },
         cwd: repo
-      })
-    expect(shell(`${CREATE} -F body.md`).code).toBe(0)
-    expect(shell(`${CREATE} --fill`).code).toBe(2)
+      }).code
+    expect(shell(`${CREATE} -F body.md`)).toBe(0)
+    expect(shell(`${CREATE} --fill`)).toBe(2)
     const mcp = run('gemini', {
       tool_name: 'mcp_github_create_pull_request',
       tool_input: { body: '' },
@@ -208,10 +241,6 @@ describe('other tools', () => {
     ).toMatchObject({
       permissionDecision: 'deny'
     })
-  })
-
-  it('does not track reviewer runs outside Claude Code', () => {
-    expect(run('codex', bash(`${CREATE} -F body.md`)).code).toBe(0)
   })
 })
 

@@ -1,361 +1,222 @@
-// Pure policy for the pre-PR review gate. See docs/agents/git-and-prs.md.
+// @ts-check
+// Rules for the pre-PR review gate. See docs/agents/git-and-prs.md.
 // No I/O: the entry script (review-gate.mjs) reads files and git and passes
 // the results in, so every rule here is unit-tested.
 
-export const REVIEWERS = [
+import { posix } from 'node:path'
+
+import { basename, parseCommands } from './shell-parse.mjs'
+
+/** The reviewers, in the order the PR template lists them. */
+export const REVIEWERS = /** @type {const} */ ([
   { agent: 'review-code-quality', label: 'Code quality' },
   { agent: 'review-correctness', label: 'Correctness' },
   { agent: 'review-spec', label: 'Spec, security, copy' },
   { agent: 'review-dry', label: 'DRY' }
-]
-
-export const PLACEHOLDER = 'fixed / declined (why) / filed (issue link)'
-
-// ---- Shell parsing ----
-//
-// A small parser, not a full shell. It finds every simple command in a
-// script, including ones inside `$(...)`, backticks, `bash -c`, and `eval`,
-// and ignores text inside quotes and heredoc bodies.
-
-const HEREDOC_START = /<<-?\s*(['"]?)([A-Za-z_][\w-]*)\1/g
-
-export function stripHeredocBodies(script) {
-  const out = []
-  const pending = []
-  for (const line of script.split('\n')) {
-    if (pending.length > 0) {
-      if (line.trim() === pending[0]) pending.shift()
-      out.push('')
-      continue
-    }
-    out.push(line)
-    for (const match of line.matchAll(HEREDOC_START)) pending.push(match[2])
-  }
-  return out.join('\n')
-}
-
-// Reads the `$(...)` body starting at `start` (just past the `(`). Returns
-// the body text and the index just past the closing `)`.
-function readSubstitution(text, start) {
-  let depth = 1
-  let quote = null
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i]
-    if (quote) {
-      if (ch === '\\' && quote === '"') i++
-      else if (ch === quote) quote = null
-      continue
-    }
-    if (ch === '\\') i++
-    else if (ch === "'" || ch === '"') quote = ch
-    else if (ch === '(') depth++
-    else if (ch === ')' && --depth === 0)
-      return { body: text.slice(start, i), end: i + 1 }
-  }
-  return { body: text.slice(start), end: text.length }
-}
-
-const OPERATORS = ['&&', '||', ';;', '|&', ';', '|', '&', '(', ')', '\n']
-
-// Splits a script into tokens: { word } or { op }. Nested scripts from
-// `$(...)` and backticks go into `nested`.
-function tokenize(script, nested) {
-  const tokens = []
-  let word = null
-  const endWord = () => {
-    if (word !== null) tokens.push({ word })
-    word = null
-  }
-  for (let i = 0; i < script.length; i++) {
-    const ch = script[i]
-    if (ch === ' ' || ch === '\t') {
-      endWord()
-    } else if (ch === '#' && word === null) {
-      while (i + 1 < script.length && script[i + 1] !== '\n') i++
-    } else if (ch === '\\') {
-      if (script[i + 1] !== '\n') word = (word ?? '') + (script[i + 1] ?? '')
-      i++
-    } else if (ch === "'") {
-      const end = script.indexOf("'", i + 1)
-      const close = end === -1 ? script.length : end
-      word = (word ?? '') + script.slice(i + 1, close)
-      i = close
-    } else if (ch === '"') {
-      let value = ''
-      for (i++; i < script.length && script[i] !== '"'; i++) {
-        if (script[i] === '\\') {
-          value += script[++i] ?? ''
-        } else if (script[i] === '$' && script[i + 1] === '(') {
-          const { body, end } = readSubstitution(script, i + 2)
-          nested.push(body)
-          value += `$(${body})`
-          i = end - 1
-        } else if (script[i] === '`') {
-          const end = script.indexOf('`', i + 1)
-          const close = end === -1 ? script.length : end
-          nested.push(script.slice(i + 1, close))
-          i = close
-        } else {
-          value += script[i]
-        }
-      }
-      word = (word ?? '') + value
-    } else if (ch === '$' && script[i + 1] === '(') {
-      const { body, end } = readSubstitution(script, i + 2)
-      nested.push(body)
-      word = (word ?? '') + `$(${body})`
-      i = end - 1
-    } else if (ch === '`') {
-      const end = script.indexOf('`', i + 1)
-      const close = end === -1 ? script.length : end
-      nested.push(script.slice(i + 1, close))
-      i = close
-    } else if (ch === '<' || ch === '>') {
-      endWord()
-      while (
-        script[i + 1] === '<' ||
-        script[i + 1] === '>' ||
-        script[i + 1] === '&'
-      )
-        i++
-      tokens.push({ op: 'redirect' })
-    } else {
-      const op = OPERATORS.find((candidate) => script.startsWith(candidate, i))
-      if (op) {
-        endWord()
-        tokens.push({ op })
-        i += op.length - 1
-      } else {
-        word = (word ?? '') + ch
-      }
-    }
-  }
-  endWord()
-  return tokens
-}
-
-const KEYWORDS = new Set([
-  'if',
-  'then',
-  'else',
-  'elif',
-  'do',
-  'while',
-  'until',
-  '!',
-  '{',
-  '}',
-  'time'
-])
-const WRAPPERS = new Set([
-  'command',
-  'builtin',
-  'exec',
-  'nohup',
-  'sudo',
-  'env',
-  'nice',
-  'xargs'
-])
-const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh'])
-const ASSIGNMENT = /^[A-Za-z_]\w*=/
-
-function basename(path) {
-  return path.slice(path.lastIndexOf('/') + 1)
-}
-
-// Drops env assignments, shell keywords, and wrapper commands (with their
-// flags) from the front of a command.
-function unwrap(argv) {
-  let rest = argv
-  for (;;) {
-    const [first] = rest
-    if (first === undefined) return rest
-    if (ASSIGNMENT.test(first) || KEYWORDS.has(first)) {
-      rest = rest.slice(1)
-    } else if (WRAPPERS.has(basename(first))) {
-      rest = rest.slice(1)
-      while (rest[0]?.startsWith('-')) rest = rest.slice(1)
-    } else {
-      return rest
-    }
-  }
-}
-
-// Every simple command in the script, as an argv array.
-export function parseCommands(script, depth = 0) {
-  if (depth > 5) return []
-  const nested = []
-  const tokens = tokenize(stripHeredocBodies(script), nested)
-  const commands = []
-  let argv = []
-  let skipNext = false
-  const flush = () => {
-    const command = unwrap(argv)
-    if (command.length > 0) commands.push(command)
-    argv = []
-  }
-  for (const token of tokens) {
-    if (token.op === 'redirect') {
-      skipNext = true
-    } else if (token.op) {
-      flush()
-    } else if (skipNext) {
-      skipNext = false
-    } else {
-      argv.push(token.word)
-    }
-  }
-  flush()
-
-  const inner = []
-  for (const command of commands) {
-    const name = basename(command[0])
-    if (SHELLS.has(name)) {
-      const flag = command.findIndex(
-        (arg, i) => i > 0 && /^-[a-z]*c[a-z]*$/.test(arg)
-      )
-      if (flag !== -1 && command[flag + 1] !== undefined) {
-        inner.push(...parseCommands(command[flag + 1], depth + 1))
-      }
-    } else if (name === 'eval') {
-      inner.push(...parseCommands(command.slice(1).join(' '), depth + 1))
-    }
-  }
-  for (const body of nested) inner.push(...parseCommands(body, depth + 1))
-  return [...commands, ...inner]
-}
-
-// ---- gh commands ----
-
-const PR_CREATE_VALUE_FLAGS = new Set([
-  '-t',
-  '--title',
-  '-b',
-  '--body',
-  '-F',
-  '--body-file',
-  '-B',
-  '--base',
-  '-H',
-  '--head',
-  '-a',
-  '--assignee',
-  '-l',
-  '--label',
-  '-m',
-  '--milestone',
-  '-p',
-  '--project',
-  '-r',
-  '--reviewer',
-  '-R',
-  '--repo',
-  '-T',
-  '--template',
-  '--recover'
 ])
 
+/** @typedef {(typeof REVIEWERS)[number]['agent']} ReviewerAgent */
+
+/**
+ * A call that opens a PR. `dir` is where a leading `cd` moved the shell,
+ * relative to the hook's working directory.
+ * @typedef {{ kind: 'pr-create', bodyFile?: string, fill: boolean, web: boolean, head?: string, base?: string, dir?: string }
+ *   | { kind: 'mcp-create', body: string, head?: string, base?: string }
+ *   | { kind: 'api-create' }
+ *   | { kind: 'graphql-files', files: string[], dir?: string }} PrCommand
+ */
+
+/**
+ * A tool call, as an adapter in review-gate.mjs reads it.
+ * @typedef {{ kind: 'shell', command: string }
+ *   | { kind: 'mcp', input: Record<string, unknown> }} PrCall
+ */
+
+/** @typedef {{ deny: string } | null} Decision */
+
+// ---- Flags ----
+
+/**
+ * Reads flags from argv. `--flag=value`, `-fvalue`, and `-f value` all
+ * work for flags in `valueFlags`. `--flag=false` counts as not set.
+ * @param {string[]} args
+ * @param {Set<string>} valueFlags
+ */
 function readFlags(args, valueFlags) {
+  /** @type {Map<string, string[]>} */
   const flags = new Map()
+  /** @type {string[]} */
   const positional = []
+  const add = (/** @type {string} */ name, /** @type {string} */ value) => {
+    flags.set(name, [...(flags.get(name) ?? []), value])
+  }
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
+    const arg = args[i] ?? ''
     const eq = arg.startsWith('--') ? arg.indexOf('=') : -1
     if (eq !== -1) {
-      flags.set(arg.slice(0, eq), [
-        ...(flags.get(arg.slice(0, eq)) ?? []),
-        arg.slice(eq + 1)
-      ])
+      const value = arg.slice(eq + 1)
+      if (!/^(false|0)$/i.test(value)) add(arg.slice(0, eq), value)
     } else if (valueFlags.has(arg)) {
-      flags.set(arg, [...(flags.get(arg) ?? []), args[++i] ?? ''])
+      add(arg, args[++i] ?? '')
+    } else if (
+      /^-[^-]/.test(arg) &&
+      arg.length > 2 &&
+      valueFlags.has(arg.slice(0, 2))
+    ) {
+      add(arg.slice(0, 2), arg.slice(2))
     } else if (arg.startsWith('-') && arg !== '-') {
-      flags.set(arg, [...(flags.get(arg) ?? []), true])
+      add(arg, 'true')
     } else {
       positional.push(arg)
     }
   }
-  const get = (...names) => names.flatMap((name) => flags.get(name) ?? [])
-  return { get, positional }
+  const all = (/** @type {string[]} */ ...names) =>
+    names.flatMap((name) => flags.get(name) ?? [])
+  return {
+    all,
+    has: (/** @type {string[]} */ ...names) => all(...names).length > 0,
+    positional
+  }
 }
 
-function classifyPrCreate(args) {
-  const { get } = readFlags(args, PR_CREATE_VALUE_FLAGS)
-  if (get('-h', '--help', '--dry-run').length > 0) return null
+// ---- gh commands ----
+
+const PR_CREATE_VALUE_FLAGS = new Set(
+  'title body body-file base head assignee label milestone project reviewer repo template recover'
+    .split(' ')
+    .map((name) => `--${name}`)
+    .concat([
+      '-t',
+      '-b',
+      '-F',
+      '-B',
+      '-H',
+      '-a',
+      '-l',
+      '-m',
+      '-p',
+      '-r',
+      '-R',
+      '-T'
+    ])
+)
+const PR_GROUP_VALUE_FLAGS = new Set(['-R', '--repo'])
+
+/**
+ * @param {string[]} args  argv after `gh pr create`
+ * @param {string | undefined} dir
+ * @returns {PrCommand | null}
+ */
+function classifyPrCreate(args, dir) {
+  const { all, has } = readFlags(args, PR_CREATE_VALUE_FLAGS)
+  if (has('-h', '--help', '--dry-run')) return null
   return {
     kind: 'pr-create',
-    bodyFile: get('-F', '--body-file').at(-1),
-    inlineBody: get('-b', '--body').length > 0,
-    fill: get('-f', '--fill', '--fill-first', '--fill-verbose').length > 0,
-    web: get('-w', '--web').length > 0,
-    head: get('-H', '--head').at(-1),
-    base: get('-B', '--base').at(-1)
+    bodyFile: all('-F', '--body-file').at(-1),
+    fill: has('-f', '--fill', '--fill-first', '--fill-verbose'),
+    web: has('-w', '--web'),
+    head: all('-H', '--head').at(-1),
+    base: all('-B', '--base').at(-1),
+    dir
   }
 }
 
-const API_VALUE_FLAGS = new Set([
-  '-X',
-  '--method',
-  '-f',
-  '--raw-field',
-  '-F',
-  '--field',
-  '-H',
-  '--header',
-  '--input',
-  '-q',
-  '--jq',
-  '-t',
-  '--template',
-  '--cache',
-  '-p',
-  '--preview',
-  '--hostname'
-])
-
+const API_VALUE_FLAGS = new Set(
+  'method raw-field field header input jq template cache preview hostname'
+    .split(' ')
+    .map((name) => `--${name}`)
+    .concat(['-X', '-f', '-F', '-H', '-q', '-t', '-p'])
+)
 const PULLS_ENDPOINT = /^\/?repos\/[^/]+\/[^/]+\/pulls\/?(\?.*)?$/
 
-function classifyApi(args) {
-  const { get, positional } = readFlags(args, API_VALUE_FLAGS)
+/**
+ * @param {string[]} args  argv after `gh api`
+ * @param {string | undefined} dir
+ * @returns {PrCommand | null}
+ */
+function classifyApi(args, dir) {
+  const { all, positional } = readFlags(args, API_VALUE_FLAGS)
   const endpoint = positional[0] ?? ''
-  const fields = get('-f', '--raw-field', '-F', '--field')
-  const hasBody = fields.length > 0 || get('--input').length > 0
-  const method = String(
-    get('-X', '--method').at(-1) ?? (hasBody ? 'POST' : 'GET')
+  const fields = all('-f', '--raw-field', '-F', '--field')
+  const inputs = all('--input')
+  const method = (
+    all('-X', '--method').at(-1) ??
+    (fields.length + inputs.length > 0 ? 'POST' : 'GET')
   ).toUpperCase()
-  if (
-    endpoint === 'graphql' &&
-    fields.some((field) => /createPullRequest/.test(String(field)))
-  ) {
-    return { kind: 'api-create' }
+
+  if (endpoint === 'graphql') {
+    if (fields.some((field) => field.includes('createPullRequest')))
+      return { kind: 'api-create' }
+    const files = [
+      ...fields.flatMap((field) => /^[^=]+=@(.+)$/.exec(field)?.[1] ?? []),
+      ...inputs
+    ]
+    return files.length > 0 ? { kind: 'graphql-files', files, dir } : null
   }
-  if (PULLS_ENDPOINT.test(endpoint) && method === 'POST')
-    return { kind: 'api-create' }
-  return null
+  return PULLS_ENDPOINT.test(endpoint) && method === 'POST'
+    ? { kind: 'api-create' }
+    : null
 }
 
-// The PR-opening commands in a shell script, if any.
+/**
+ * The PR-opening commands in a shell script, if any.
+ * @param {string} script
+ * @returns {PrCommand[]}
+ */
 export function findPrCommands(script) {
+  /** @type {PrCommand[]} */
   const found = []
+  /** @type {string | undefined} */
+  let dir
   for (const argv of parseCommands(script)) {
-    if (basename(argv[0]) !== 'gh') continue
-    const [group, sub, ...rest] = argv.slice(1)
-    if (group === 'pr' && (sub === 'create' || sub === 'new')) {
-      const pr = classifyPrCreate(rest)
-      if (pr) found.push(pr)
+    const [name, group, ...rest] = argv
+    if (name === 'cd') {
+      const target = group ?? '~'
+      dir = /[$~`]/.test(target) ? undefined : posix.join(dir ?? '.', target)
+      continue
+    }
+    if (basename(name ?? '') !== 'gh') continue
+    if (group === 'pr') {
+      const sub = readFlags(rest, PR_GROUP_VALUE_FLAGS).positional[0]
+      if (sub === 'create' || sub === 'new') {
+        const pr = classifyPrCreate(rest.slice(rest.indexOf(sub) + 1), dir)
+        if (pr) found.push(pr)
+      }
     } else if (group === 'api') {
-      const api = classifyApi(argv.slice(2))
+      const api = classifyApi(rest, dir)
       if (api) found.push(api)
     }
   }
   return found
 }
 
+/**
+ * The PR-opening commands in a tool call.
+ * @param {PrCall} call
+ * @returns {PrCommand[]}
+ */
+export function prCommandsOf(call) {
+  if (call.kind === 'shell') return findPrCommands(call.command)
+  const text = (/** @type {unknown} */ value) =>
+    typeof value === 'string' ? value : undefined
+  return [
+    {
+      kind: 'mcp-create',
+      body: text(call.input.body) ?? '',
+      head: text(call.input.head),
+      base: text(call.input.base)
+    }
+  ]
+}
+
 // ---- Review section ----
 
-// Returns the reviewer labels whose `**Label:**` line under `## Review` is
-// missing, empty, or still the placeholder. Null when the body has no
-// `## Review` section at all.
+/**
+ * The reviewer labels whose `**Label:**` line under `## Review` is missing
+ * or empty. Null when the body has no `## Review` section at all.
+ * @param {string} markdown
+ * @returns {string[] | null}
+ */
 export function unfilledReviewLabels(markdown) {
   const lines = markdown
     .replace(/\r/g, '')
@@ -371,10 +232,46 @@ export function unfilledReviewLabels(markdown) {
   return REVIEWERS.filter(({ label }) => {
     const prefix = `**${label}:**`
     const line = section.find((candidate) => candidate.includes(prefix))
-    if (!line) return true
-    const value = line.slice(line.indexOf(prefix) + prefix.length).trim()
-    return value === '' || value === PLACEHOLDER
+    return (
+      !line || line.slice(line.indexOf(prefix) + prefix.length).trim() === ''
+    )
   }).map(({ label }) => label)
+}
+
+// ---- Reviewer runs ----
+
+/**
+ * Whether a finished subagent counts as a reviewer run: it is a reviewer,
+ * and it returned a report.
+ * @param {unknown} agent
+ * @param {unknown} output
+ * @returns {agent is ReviewerAgent}
+ */
+export function countsAsRun(agent, output) {
+  return (
+    REVIEWERS.some((reviewer) => reviewer.agent === agent) &&
+    typeof output === 'string' &&
+    output.trim() !== ''
+  )
+}
+
+/**
+ * The reviewers with no run that counts for this PR. A run counts when the
+ * commit it reviewed is on the PR branch and not already on the base. Fix
+ * commits made after the review still count; amending, squashing, or
+ * rebasing past the reviewed commit does not.
+ * @param {Partial<Record<ReviewerAgent, { head?: string }>>} runs
+ * @param {{ head: string | null, base: string | null, isAncestor: (commit: string, of: string) => boolean }} branch
+ * @returns {ReviewerAgent[]}
+ */
+export function reviewersWithoutRun(runs, { head, base, isAncestor }) {
+  return REVIEWERS.map(({ agent }) => agent).filter((agent) => {
+    const reviewed = runs[agent]?.head
+    if (!head || !reviewed) return true
+    const onBranch = isAncestor(reviewed, head)
+    const onlyBase = base !== null && isAncestor(reviewed, base)
+    return !onBranch || onlyBase
+  })
 }
 
 // ---- Decisions ----
@@ -382,46 +279,60 @@ export function unfilledReviewLabels(markdown) {
 const REVIEW_FORMAT =
   'The PR body needs a "## Review" section with one filled line per reviewer, as in .github/pull_request_template.md.'
 
-// Decides a PR-opening call. `bodyOf(pr)` returns the body file's text, or
-// { missing: path } when the file does not exist. `reviewersNotRun(pr)`
-// returns the reviewer agents that have not run on the PR's branch, or null
-// when this tool does not track reviewer runs.
-export function decidePr(pr, { bodyOf, reviewersNotRun }) {
+/**
+ * Decides a PR-opening command. `readFile` resolves paths from the PR
+ * command's directory and returns null for a missing file. Tools that do
+ * not track reviewer runs pass `reviewersNotRun: () => []`.
+ * @param {PrCommand} pr
+ * @param {{ readFile: (path: string) => string | null, reviewersNotRun: () => string[] }} deps
+ * @returns {Decision}
+ */
+export function decidePr(pr, { readFile, reviewersNotRun }) {
   if (pr.kind === 'api-create') {
     return { deny: 'Open PRs with `gh pr create --body-file`, not `gh api`.' }
   }
-  if (pr.kind === 'mcp-create') return decideBody(pr, pr.body, reviewersNotRun)
-  if (pr.fill || pr.web) {
+  if (pr.kind === 'graphql-files') {
+    const creates = pr.files.some((file) =>
+      readFile(file)?.includes('createPullRequest')
+    )
+    return creates
+      ? {
+          deny: 'Open PRs with `gh pr create --body-file`, not a GraphQL mutation.'
+        }
+      : null
+  }
+
+  let body
+  if (pr.kind === 'mcp-create') {
+    body = pr.body
+  } else if (pr.fill || pr.web) {
     return {
       deny: 'The hook cannot read a body from `--fill` or `--web`. Use `--body-file`.'
     }
-  }
-  if (!pr.bodyFile || pr.bodyFile === '-') {
+  } else if (!pr.bodyFile || pr.bodyFile === '-') {
     return {
       deny: 'Write the PR body to a file first, in its own step. Then run `gh pr create --body-file <path>`.'
     }
-  }
-  const body = bodyOf(pr)
-  if (typeof body !== 'string') {
-    return {
-      deny: `The body file \`${body.missing}\` does not exist. Write it in its own step before \`gh pr create\`.`
+  } else {
+    body = readFile(pr.bodyFile)
+    if (body === null) {
+      return {
+        deny: `The body file \`${pr.bodyFile}\` does not exist. Write it in its own step before \`gh pr create\`.`
+      }
     }
   }
 
-  return decideBody(pr, body, reviewersNotRun)
-}
-
-function decideBody(pr, body, reviewersNotRun) {
-  const notRun = reviewersNotRun(pr)
-  if (notRun && notRun.length > 0) {
+  const notRun = reviewersNotRun()
+  if (notRun.length > 0) {
     return {
-      deny: `These reviewers have not run on this branch's commits: ${notRun.join(', ')}. Start each with the Agent tool, subagent_type set to its name and no model.`
+      deny: `These reviewers have no run on this branch: ${notRun.join(', ')}. Start each with the Agent tool, subagent_type set to its name and no model.`
     }
   }
 
   const unfilled = unfilledReviewLabels(body)
-  if (unfilled === null)
+  if (unfilled === null) {
     return { deny: `The PR body has no "## Review" section. ${REVIEW_FORMAT}` }
+  }
   if (unfilled.length > 0) {
     return {
       deny: `The Review section has no filled line for: ${unfilled.join(', ')}. ${REVIEW_FORMAT}`
@@ -430,7 +341,11 @@ function decideBody(pr, body, reviewersNotRun) {
   return null
 }
 
-// Decides a Claude Code Agent-tool call that starts a subagent.
+/**
+ * Decides a Claude Code Agent-tool call that starts a subagent.
+ * @param {{ subagent_type?: unknown, model?: unknown }} input
+ * @returns {Decision}
+ */
 export function decideReviewerStart(input) {
   const reviewer = REVIEWERS.find(({ agent }) => agent === input.subagent_type)
   if (!reviewer || !input.model) return null
