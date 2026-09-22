@@ -20,7 +20,7 @@ Run every reviewer on the branch diff, in parallel if your tool can. None of the
 
 The model rule is in `docs/agents/git-and-prs.md`.
 
-- **Claude Code:** start one `review-*` agent per reviewer (`.claude/agents/`) with the Agent tool. Do not pass a `model`; each agent file pins its own, and a hook blocks an override. A hook also blocks the PR until each reviewer has finished on the branch.
+- **Claude Code:** start one `review-*` agent per reviewer with the Agent tool. Do not pass a `model`; each agent file pins its own.
 - **Other tools:** start one subagent per reviewer with its instructions file. If your tool has no subagents, run each reviewer yourself, one at a time, and keep their findings apart.
 
 ## 2. Act on the findings
@@ -32,4 +32,4 @@ Handle each finding as `docs/agents/git-and-prs.md` says: fix it, decline it wit
 1. Write the PR body to a file, in its own step. Fill each reviewer line of the `## Review` section in `.github/pull_request_template.md` with that reviewer's findings: fixed, declined (and why), or filed (with an issue link).
 2. Run `gh pr create --body-file <path>`.
 
-A hook blocks the PR if a reviewer line is empty. It also blocks `--body`, `--fill`, and `--web`, because it checks the body file.
+Hooks check the PR before it opens. `docs/agents/git-and-prs.md` lists what they check.

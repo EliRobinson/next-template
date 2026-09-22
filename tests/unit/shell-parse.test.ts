@@ -6,7 +6,8 @@ import {
   shellScriptOf
 } from '../../scripts/agent-hooks/shell-parse.mjs'
 
-const names = (script: string) => parseCommands(script).map((argv) => argv[0])
+const argvs = (script: string) => parseCommands(script).map(({ argv }) => argv)
+const names = (script: string) => argvs(script).map((argv) => argv[0])
 
 describe('parseCommands', () => {
   it('splits on operators and newlines', () => {
@@ -22,7 +23,7 @@ describe('parseCommands', () => {
   })
 
   it('joins quoted and escaped parts of a word', () => {
-    expect(parseCommands(`g''h "a b" c\\ d`)).toEqual([['gh', 'a b', 'c d']])
+    expect(argvs(`g''h "a b" c\\ d`)).toEqual([['gh', 'a b', 'c d']])
   })
 
   it('drops env assignments, keywords, and wrappers with their flags', () => {
@@ -35,16 +36,31 @@ describe('parseCommands', () => {
     expect(names('command -- x')).toEqual(['x'])
   })
 
+  it('reads function bodies', () => {
+    expect(names('function f { x; }; f')).toContain('x')
+    expect(names('f() { x; }; f')).toContain('x')
+  })
+
   it('finds commands inside substitutions, bash -c, and eval', () => {
     expect(names('echo "$(x)"')).toContain('x')
     expect(names('echo `x`')).toContain('x')
     expect(names('echo "`x`"')).toContain('x')
+    expect(names('echo $( (x) )')).toContain('x')
     expect(names('bash -o pipefail -c "x"')).toContain('x')
     expect(names('eval "x y"')).toContain('x')
   })
 
-  it('skips redirect targets', () => {
-    expect(parseCommands('x > out.txt 2>&1 < in.txt')).toEqual([['x']])
+  it('marks which commands run in the script’s own shell', () => {
+    const top = (script: string) =>
+      parseCommands(script).map(({ argv, top: isTop }) => `${argv[0]}:${isTop}`)
+    expect(top('a && b')).toEqual(['a:true', 'b:true'])
+    expect(top('(a); b')).toEqual(['a:false', 'b:true'])
+    expect(top('echo $(a)')).toEqual(['echo:true', 'a:false'])
+    expect(top('bash -c "a"')).toEqual(['bash:true', 'a:false'])
+  })
+
+  it('skips redirect targets and file descriptors', () => {
+    expect(argvs('x > out.txt 2>&1 < in.txt')).toEqual([['x']])
   })
 
   it('skips comments', () => {
@@ -63,6 +79,7 @@ describe('parseCommands', () => {
     expect(names('echo "a <<Z"\nx')).toContain('x')
     expect(names("echo 'a <<Z'\nx")).toContain('x')
     expect(names('echo $((1 << y))\nx')).toContain('x')
+    expect(names('(( n = 1 << 2 ))\nx')).toContain('x')
   })
 })
 
@@ -81,6 +98,6 @@ describe('shellScriptOf', () => {
 describe('quoteArgv', () => {
   it('round-trips through parseCommands', () => {
     const argv = ['gh', 'pr', 'create', '-F', "my body's.md", '#', '$(x)']
-    expect(parseCommands(quoteArgv(argv))).toEqual([argv])
+    expect(argvs(quoteArgv(argv))).toEqual([argv])
   })
 })

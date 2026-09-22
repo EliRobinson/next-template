@@ -91,7 +91,7 @@ Before calling UI work done, run `pnpm ds patterns` and work the **Definition of
 ## Do Not
 
 - Do not commit directly to `main`. Use feature branches and PRs.
-- Do not open a PR before the review gate runs. Use the `review-gate` skill (`.agents/skills/review-gate/SKILL.md`). A hook blocks the PR until the body has a filled `## Review` section.
+- Do not open a PR before the review gate runs. Use the `review-gate` skill (`.agents/skills/review-gate/SKILL.md`). A hook enforces it.
 - Do not bypass hooks (`--no-verify`).
 - Do not ship UI that fails a `pnpm ds contracts` constraint (touch targets, visible focus, WCAG AA contrast, forwarded refs).
 - Do not edit inside the `design-system:begin/end` markers. See `docs/agents/design-system-upkeep.md`.

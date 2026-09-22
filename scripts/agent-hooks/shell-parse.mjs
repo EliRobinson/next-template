@@ -2,233 +2,209 @@
 // A small shell parser for the review gate hook. It is not a full shell: it
 // finds every simple command in a script, including ones inside `$(...)`,
 // backticks, `bash -c`, and `eval`, and ignores text inside quotes,
-// comments, and heredoc bodies. See docs/agents/git-and-prs.md for what it
-// does not catch.
+// comments, heredoc bodies, and `((...))`. See docs/agents/git-and-prs.md
+// for what it does not catch.
 
-/** @typedef {{ word: string } | { op: string }} Token */
+import { posix } from 'node:path'
 
 /**
- * Blanks every heredoc body, so text inside one never parses as a command.
- * Tracks quotes, `$(...)`, backticks, and `$((...))`, so `<<` inside a
- * string, a here-string (`<<<`), or an arithmetic shift is not a heredoc.
- * @param {string} script
+ * A simple command. `top` is true when it runs in the script's own shell:
+ * not in a subshell, a substitution, or a nested `bash -c` or `eval`.
+ * @typedef {{ argv: string[], top: boolean }} Command
  */
-function blankHeredocBodies(script) {
-  /** @type {Array<'code' | 'sub' | 'paren' | 'dq' | 'bt' | 'arith'>} */
-  const stack = ['code']
-  /** @type {Array<{ delimiter: string, dash: boolean }>} */
-  const pending = []
-  let out = ''
-  let i = 0
-  const top = () => stack[stack.length - 1]
-  const inCode = () => top() !== 'dq' && top() !== 'arith'
 
-  while (i < script.length) {
-    const ch = script[i]
-    const next = script[i + 1]
-
-    if (ch === '\n' && pending.length > 0) {
-      out += '\n'
-      i++
-      while (pending.length > 0 && i < script.length) {
-        const end = script.indexOf('\n', i)
-        const lineEnd = end === -1 ? script.length : end
-        const line = script.slice(i, lineEnd)
-        const heredoc = pending[0]
-        const text = heredoc?.dash ? line.replace(/^\t+/, '') : line
-        if (text === heredoc?.delimiter) pending.shift()
-        out += '\n'
-        i = lineEnd + 1
-      }
-      continue
-    }
-
-    if (ch === '\\') {
-      out += script.slice(i, i + 2)
-      i += 2
-    } else if (top() === 'arith') {
-      if (ch === '(') stack.push('arith')
-      if (ch === ')') stack.pop()
-      out += ch
-      i++
-    } else if (top() === 'dq') {
-      if (ch === '"') stack.pop()
-      else if (ch === '$' && next === '(' && script[i + 2] === '(') {
-        stack.push('arith')
-        out += '$('
-        i += 2
-        continue
-      } else if (ch === '$' && next === '(') {
-        stack.push('sub')
-        out += '$('
-        i += 2
-        continue
-      } else if (ch === '`') stack.push('bt')
-      out += ch
-      i++
-    } else if (ch === "'") {
-      const end = script.indexOf("'", i + 1)
-      const close = end === -1 ? script.length : end + 1
-      out += script.slice(i, close)
-      i = close
-    } else if (ch === '#' && /[\s;&|()]/.test(script[i - 1] ?? ' ')) {
-      const end = script.indexOf('\n', i)
-      const close = end === -1 ? script.length : end
-      out += script.slice(i, close)
-      i = close
-    } else if (ch === '"') {
-      stack.push('dq')
-      out += ch
-      i++
-    } else if (ch === '$' && next === '(' && script[i + 2] === '(') {
-      stack.push('arith')
-      out += '$('
-      i += 2
-    } else if (ch === '$' && next === '(') {
-      stack.push('sub')
-      out += '$('
-      i += 2
-    } else if (ch === '(') {
-      stack.push('paren')
-      out += ch
-      i++
-    } else if (ch === ')') {
-      if (stack.length > 1) stack.pop()
-      out += ch
-      i++
-    } else if (ch === '`') {
-      if (top() === 'bt') stack.pop()
-      else stack.push('bt')
-      out += ch
-      i++
-    } else if (ch === '<' && next === '<' && script[i + 2] === '<') {
-      out += '<<<'
-      i += 3
-    } else if (ch === '<' && next === '<' && inCode()) {
-      const match = /^<<(-?)[ \t]*(?:'([^']*)'|"([^"]*)"|([^\s;&|()<>]+))/.exec(
-        script.slice(i)
-      )
-      if (match) {
-        const delimiter = (match[2] ?? match[3] ?? match[4] ?? '').replace(
-          /['"\\]/g,
-          ''
-        )
-        pending.push({ delimiter, dash: match[1] === '-' })
-        out += match[0]
-        i += match[0].length
-      } else {
-        out += '<<'
-        i += 2
-      }
-    } else {
-      out += ch
-      i++
-    }
-  }
-  return out
-}
+const OPERATORS = ['&&', '||', ';;', '|&', ';', '|', '&']
+const HEREDOC = /^<<(-?)[ \t]*(?:'([^']*)'|"([^"]*)"|([^\s;&|()<>]+))/
 
 /**
- * Reads a `$(...)` or backtick substitution that starts at `start`.
- * Returns its body and the index just past its end.
- * @param {string} text
+ * Reads one level of a script, from `start` to its `closer` (`)` for
+ * `$(...)`, a backtick for backticks) or the end. One pass handles quotes,
+ * substitutions, arithmetic, comments, redirects, and heredocs.
+ * @param {string} script
  * @param {number} start
+ * @param {')' | '`' | null} closer
+ * @param {boolean} top
+ * @returns {{ commands: Command[], end: number }}
  */
-function readNested(text, start) {
-  if (text[start] === '`') {
-    const end = text.indexOf('`', start + 1)
-    const close = end === -1 ? text.length : end
-    return { body: text.slice(start + 1, close), end: close + 1 }
-  }
-  let depth = 1
-  /** @type {string | null} */
-  let quote = null
-  for (let i = start + 2; i < text.length; i++) {
-    const ch = text[i]
-    if (quote) {
-      if (ch === '\\' && quote === '"') i++
-      else if (ch === quote) quote = null
-    } else if (ch === '\\') i++
-    else if (ch === "'" || ch === '"') quote = ch
-    else if (ch === '(') depth++
-    else if (ch === ')' && --depth === 0) {
-      return { body: text.slice(start + 2, i), end: i + 1 }
-    }
-  }
-  return { body: text.slice(start + 2), end: text.length }
-}
-
-const OPERATORS = ['&&', '||', ';;', '|&', ';', '|', '&', '(', ')', '\n']
-
-/**
- * Splits a script into tokens. Substitution bodies go into `nested`.
- * @param {string} script
- * @param {string[]} nested
- * @returns {Token[]}
- */
-function tokenize(script, nested) {
-  /** @type {Token[]} */
-  const tokens = []
+function readLevel(script, start, closer, top) {
+  /** @type {Command[]} */
+  const commands = []
+  /** @type {Command[]} */
+  const nested = []
+  /** @type {Array<{ delimiter: string, dash: boolean }>} */
+  const heredocs = []
+  /** @type {string[]} */
+  let argv = []
   /** @type {string | null} */
   let word = null
+  let redirectTarget = false
+  let subshell = 0
+
   const append = (/** @type {string} */ text) => {
     word = (word ?? '') + text
   }
   const endWord = () => {
-    if (word !== null) tokens.push({ word })
+    if (word === null) return
+    if (redirectTarget) redirectTarget = false
+    else argv.push(word)
     word = null
   }
-  const isSubstitution = (/** @type {number} */ i) =>
-    script[i] === '`' || (script[i] === '$' && script[i + 1] === '(')
-  const substitute = (/** @type {number} */ i) => {
-    const { body, end } = readNested(script, i)
-    nested.push(body)
-    append(script.slice(i, end))
-    return end - 1
+  const endCommand = () => {
+    endWord()
+    const command = unwrap(argv)
+    if (command.length > 0)
+      commands.push({ argv: command, top: top && subshell === 0 })
+    argv = []
+  }
+  // Reads a nested script and keeps its source text in the current word.
+  const readNested = (
+    /** @type {number} */ from,
+    /** @type {')' | '`'} */ close
+  ) => {
+    const level = readLevel(script, from, close, false)
+    nested.push(...level.commands)
+    append(script.slice(from - (close === '`' ? 1 : 2), level.end))
+    return level.end
+  }
+  // Skips `((...))` or `$((...))`, whose `<<` is a shift, not a heredoc.
+  const skipArithmetic = (
+    /** @type {number} */ from,
+    /** @type {number} */ open
+  ) => {
+    let depth = 0
+    for (let i = from + open; i < script.length; i++) {
+      if (script[i] === '(') depth++
+      else if (script[i] === ')' && depth-- === 0 && script[i + 1] === ')') {
+        append(script.slice(from, i + 2))
+        return i + 2
+      }
+    }
+    append(script.slice(from))
+    return script.length
+  }
+  // Skips heredoc bodies, starting at the line after the one that opened them.
+  const skipHeredocBodies = (/** @type {number} */ from) => {
+    let i = from
+    while (heredocs.length > 0 && i < script.length) {
+      const newline = script.indexOf('\n', i)
+      const lineEnd = newline === -1 ? script.length : newline
+      const line = script.slice(i, lineEnd)
+      const heredoc = heredocs[0]
+      if (
+        (heredoc?.dash ? line.replace(/^\t+/, '') : line) === heredoc?.delimiter
+      )
+        heredocs.shift()
+      i = lineEnd + 1
+    }
+    return i
   }
 
-  for (let i = 0; i < script.length; i++) {
+  let i = start
+  while (i < script.length) {
     const ch = script[i] ?? ''
+    const next = script[i + 1]
+    const arithmetic =
+      (ch === '$' && next === '(' && script[i + 2] === '(') ||
+      (ch === '(' && next === '(' && word === null)
+
+    if (
+      (closer === '`' && ch === '`') ||
+      (closer === ')' && ch === ')' && subshell === 0)
+    ) {
+      endCommand()
+      return { commands: [...commands, ...nested], end: i + 1 }
+    }
     if (ch === ' ' || ch === '\t') {
       endWord()
-    } else if (ch === '#' && word === null) {
-      while (i + 1 < script.length && script[i + 1] !== '\n') i++
-    } else if (ch === '\\') {
-      if (script[i + 1] !== '\n') append(script[i + 1] ?? '')
       i++
+    } else if (ch === '#' && word === null) {
+      while (i < script.length && script[i] !== '\n') i++
+    } else if (ch === '\\') {
+      if (next !== '\n') append(next ?? '')
+      i += 2
     } else if (ch === "'") {
       const end = script.indexOf("'", i + 1)
       const close = end === -1 ? script.length : end
       append(script.slice(i + 1, close))
-      i = close
+      i = close + 1
     } else if (ch === '"') {
       append('')
-      for (i++; i < script.length && script[i] !== '"'; i++) {
-        if (script[i] === '\\') append(script[++i] ?? '')
-        else if (isSubstitution(i)) i = substitute(i)
-        else append(script[i] ?? '')
+      i++
+      while (i < script.length && script[i] !== '"') {
+        const inner = script[i]
+        if (inner === '\\') {
+          append(script[i + 1] ?? '')
+          i += 2
+        } else if (
+          inner === '$' &&
+          script[i + 1] === '(' &&
+          script[i + 2] === '('
+        ) {
+          i = skipArithmetic(i, 3)
+        } else if (inner === '$' && script[i + 1] === '(') {
+          i = readNested(i + 2, ')')
+        } else if (inner === '`') {
+          i = readNested(i + 1, '`')
+        } else {
+          append(inner ?? '')
+          i++
+        }
       }
-    } else if (isSubstitution(i)) {
-      i = substitute(i)
+      i++
+    } else if (arithmetic) {
+      i = skipArithmetic(i, ch === '$' ? 3 : 2)
+    } else if (ch === '$' && next === '(') {
+      i = readNested(i + 2, ')')
+    } else if (ch === '`') {
+      i = readNested(i + 1, '`')
+    } else if (script.startsWith('<<<', i)) {
+      endWord()
+      redirectTarget = true
+      i += 3
+    } else if (ch === '<' && next === '<') {
+      endWord()
+      const match = HEREDOC.exec(script.slice(i))
+      if (match) {
+        const delimiter = (match[2] ?? match[3] ?? match[4] ?? '').replace(
+          /\\/g,
+          ''
+        )
+        heredocs.push({ delimiter, dash: match[1] === '-' })
+        i += match[0].length
+      } else {
+        i += 2
+      }
     } else if (ch === '<' || ch === '>') {
       // A file descriptor before a redirect, as in `2>&1`, is not a word.
       if (word !== null && /^\d+$/.test(word)) word = null
       endWord()
-      while (/[<>&]/.test(script[i + 1] ?? '')) i++
-      tokens.push({ op: 'redirect' })
+      i++
+      while (/[<>&|]/.test(script[i] ?? '')) i++
+      redirectTarget = true
+    } else if (ch === '(') {
+      endCommand()
+      subshell++
+      i++
+    } else if (ch === ')') {
+      endCommand()
+      subshell = Math.max(0, subshell - 1)
+      i++
+    } else if (ch === '\n') {
+      endCommand()
+      i = heredocs.length > 0 ? skipHeredocBodies(i + 1) : i + 1
     } else {
       const op = OPERATORS.find((candidate) => script.startsWith(candidate, i))
       if (op) {
-        endWord()
-        tokens.push({ op })
-        i += op.length - 1
+        endCommand()
+        i += op.length
       } else {
         append(ch)
+        i++
       }
     }
   }
-  endWord()
-  return tokens
+  endCommand()
+  return { commands: [...commands, ...nested], end: script.length }
 }
 
 const KEYWORDS = new Set([
@@ -283,14 +259,9 @@ const WRAPPERS = {
 const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh'])
 const ASSIGNMENT = /^[A-Za-z_]\w*=/
 
-/** @param {string} path */
-export function basename(path) {
-  return path.slice(path.lastIndexOf('/') + 1)
-}
-
 /**
- * Drops env assignments, shell keywords, and wrapper commands (with their
- * flags) from the front of a command.
+ * Drops env assignments, shell keywords, `function <name>`, and wrapper
+ * commands (with their flags) from the front of a command.
  * @param {string[]} argv
  */
 function unwrap(argv) {
@@ -298,9 +269,11 @@ function unwrap(argv) {
   for (;;) {
     const first = rest[0]
     if (first === undefined) return rest
-    const wrapper = WRAPPERS[basename(first)]
+    const wrapper = WRAPPERS[posix.basename(first)]
     if (ASSIGNMENT.test(first) || KEYWORDS.has(first)) {
       rest = rest.slice(1)
+    } else if (first === 'function') {
+      rest = rest.slice(2)
     } else if (wrapper) {
       rest = rest.slice(1)
       while (rest[0]?.startsWith('-')) {
@@ -321,7 +294,7 @@ function unwrap(argv) {
  * @returns {string | null}
  */
 export function shellScriptOf(argv) {
-  if (!SHELLS.has(basename(argv[0] ?? ''))) return null
+  if (!SHELLS.has(posix.basename(argv[0] ?? ''))) return null
   const flag = argv.findIndex(
     (arg, i) => i > 0 && /^-[a-zA-Z]*c[a-zA-Z]*$/.test(arg)
   )
@@ -337,43 +310,23 @@ export function quoteArgv(argv) {
 }
 
 /**
- * Every simple command in the script, as an argv array, in order. Commands
- * from nested scripts come after the commands of the script around them.
+ * Every simple command in the script. Commands of the script itself come
+ * first, in order; commands from nested scripts follow.
  * @param {string} script
  * @param {number} [depth]
- * @returns {string[][]}
+ * @returns {Command[]}
  */
 export function parseCommands(script, depth = 0) {
   if (depth > 5) return []
-  /** @type {string[]} */
-  const nested = []
-  const tokens = tokenize(blankHeredocBodies(script), nested)
-  /** @type {string[][]} */
-  const commands = []
-  /** @type {string[]} */
-  let argv = []
-  let skipNext = false
-  const flush = () => {
-    const command = unwrap(argv)
-    if (command.length > 0) commands.push(command)
-    argv = []
-  }
-  for (const token of tokens) {
-    if ('op' in token && token.op === 'redirect') skipNext = true
-    else if ('op' in token) flush()
-    else if (skipNext) skipNext = false
-    else argv.push(token.word)
-  }
-  flush()
-
-  /** @type {string[][]} */
+  const { commands } = readLevel(script, 0, null, depth === 0)
+  /** @type {Command[]} */
   const inner = []
-  for (const command of commands) {
-    const script = shellScriptOf(command)
-    if (script !== null) inner.push(...parseCommands(script, depth + 1))
-    else if (command[0] === 'eval')
-      inner.push(...parseCommands(command.slice(1).join(' '), depth + 1))
+  for (const { argv } of commands) {
+    const shellScript = shellScriptOf(argv)
+    if (shellScript !== null)
+      inner.push(...parseCommands(shellScript, depth + 1))
+    else if (argv[0] === 'eval')
+      inner.push(...parseCommands(argv.slice(1).join(' '), depth + 1))
   }
-  for (const body of nested) inner.push(...parseCommands(body, depth + 1))
   return [...commands, ...inner]
 }
