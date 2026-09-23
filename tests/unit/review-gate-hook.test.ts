@@ -3,7 +3,7 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { REVIEWERS } from '../../scripts/agent-hooks/review-gate-policy.mjs'
 import { CREATE, GH, filledReview } from './review-gate-fixtures'
 
@@ -13,19 +13,32 @@ import { CREATE, GH, filledReview } from './review-gate-fixtures'
 
 const HOOK = resolve('scripts/agent-hooks/review-gate.mjs')
 
+// Each test spawns git and node several times; under a full run the slowest
+// come close to the 5s default.
+vi.setConfig({ testTimeout: 30_000 })
+
 let repo: string
+
+// Git sets GIT_DIR and friends when it runs a hook such as pre-push. If the
+// child git and node calls inherit them, they act on this repo's real .git
+// instead of the throwaway repo.
+const childEnv = { ...process.env }
+for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_PREFIX'])
+  delete childEnv[key]
 
 const git = (...args: string[]) =>
   execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
     cwd: repo,
-    stdio: 'ignore'
+    stdio: 'ignore',
+    env: childEnv
   })
 
 function run(agent: string, event: unknown) {
   const result = spawnSync('node', [HOOK, `--agent=${agent}`], {
     input: typeof event === 'string' ? event : JSON.stringify(event),
     cwd: repo,
-    encoding: 'utf8'
+    encoding: 'utf8',
+    env: childEnv
   })
   let json = null
   try {
@@ -84,7 +97,10 @@ describe('Claude Code', () => {
       REVIEWERS.map(
         ({ agent }) =>
           new Promise((resolve) => {
-            const child = spawn('node', [HOOK, '--agent=claude'], { cwd: repo })
+            const child = spawn('node', [HOOK, '--agent=claude'], {
+              cwd: repo,
+              env: childEnv
+            })
             child.on('close', resolve)
             child.stdin.end(JSON.stringify(stop(agent)))
           })
