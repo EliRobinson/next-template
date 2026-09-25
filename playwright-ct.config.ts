@@ -1,17 +1,18 @@
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { defineConfig, devices } from '@playwright/experimental-ct-react'
 
-// Screenshot regression tests for components in isolation. E2E specs in e2e/
-// assert behavior and never compare pixels. See docs/agents/testing.md.
+// Screenshot regression tests for components in isolation. When to write one:
+// docs/agents/testing.md.
 //
 // Baselines are rendered by Linux Chromium in the Playwright Docker image, so
 // they match on every machine. `pnpm test:visual` starts that browser and
-// connects to it. A browser on another OS draws fonts and anti-aliasing
-// differently, so a run without it is refused rather than left to fail on
-// pixel noise.
-if (process.platform !== 'linux' && !process.env.PW_TEST_CONNECT_WS_ENDPOINT) {
+// connects to it. Any other browser draws fonts and anti-aliasing differently,
+// so a run is refused unless it uses that browser or runs inside the image
+// itself (which ships its browsers in /ms-playwright).
+if (!process.env.PW_TEST_CONNECT_WS_ENDPOINT && !existsSync('/ms-playwright')) {
   throw new Error(
-    'Visual tests need the Linux browser. Run them with `pnpm test:visual`.'
+    'Visual tests need the Playwright Docker browser. Run them with `pnpm test:visual`.'
   )
 }
 

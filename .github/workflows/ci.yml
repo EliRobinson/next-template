@@ -84,11 +84,6 @@ jobs:
   visual:
     name: Visual tests
     runs-on: ubuntu-latest
-    # The image the baselines were made in. Keep the tag equal to the
-    # @playwright/test version in package.json.
-    container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --ipc=host
     steps:
       - uses: actions/checkout@v4
 
@@ -96,10 +91,9 @@ jobs:
         with:
           node-auth-token: ${{ secrets.NODE_AUTH_TOKEN }}
 
+      # The script picks the Playwright Docker image from package.json.
       - name: Run visual tests
         run: pnpm test:visual
-        env:
-          VISUAL_NATIVE: '1'
 
       - name: Upload visual report
         uses: actions/upload-artifact@v4

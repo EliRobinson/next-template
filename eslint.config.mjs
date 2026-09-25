@@ -51,6 +51,21 @@ const eslintConfig = [
   // shadcn/ui output is the sanctioned gap-filler, so direct primitive
   // imports are allowed there and nowhere else.
   ...designSystem({ gapFiller: ['src/components/ui/**'] }),
+  // Screenshots belong in tests/visual/, one component at a time. Full-page
+  // E2E screenshots drift on every unrelated change. docs/agents/testing.md.
+  {
+    files: ['e2e/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='toHaveScreenshot']",
+          message:
+            'E2E specs assert behavior, not pixels. Put screenshot tests in tests/visual/.'
+        }
+      ]
+    }
+  },
   // Prettier must be last to disable conflicting formatting rules
   prettierConfig
 ]
