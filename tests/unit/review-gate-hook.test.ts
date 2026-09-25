@@ -15,15 +15,17 @@ const HOOK = resolve('scripts/agent-hooks/review-gate.mjs')
 
 // Each test spawns git and node several times; under a full run the slowest
 // come close to the 5s default.
-vi.setConfig({ testTimeout: 30_000 })
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 })
 
 let repo: string
 
 // Git sets GIT_DIR and friends when it runs a hook such as pre-push. If the
 // child git and node calls inherit them, they act on this repo's real .git
-// instead of the throwaway repo.
+// instead of the throwaway repo. Git lists every such variable itself.
 const childEnv = { ...process.env }
-for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_PREFIX'])
+for (const key of execFileSync('git', ['rev-parse', '--local-env-vars'], {
+  encoding: 'utf8'
+}).split('\n'))
   delete childEnv[key]
 
 const git = (...args: string[]) =>
