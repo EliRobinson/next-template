@@ -27,6 +27,9 @@ pnpm-debug.log*
 /test-results/
 /blob-report/
 /playwright/.cache/
+/playwright-report-visual/
+/test-results-visual/
+/tests/visual/harness/.cache/
 
 # ---- Environment ----
 .env

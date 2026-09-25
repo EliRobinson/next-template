@@ -1,5 +1,5 @@
-import { Card, CardContent } from '@elirobinson/react/components/molecules/Card'
 import { Eyebrow } from '@elirobinson/react/components/atoms/Eyebrow'
+import { TechStack } from '@/components/tech-stack'
 
 export default function Home() {
   return (
@@ -13,16 +13,7 @@ export default function Home() {
           pre-configured.
         </p>
 
-        <div className='grid grid-cols-2 gap-3 text-left sm:grid-cols-3'>
-          {stack.map((item) => (
-            <Card key={item.name}>
-              <CardContent className='p-3'>
-                <p className='t-body-sm font-medium'>{item.name}</p>
-                <p className='t-caption'>{item.description}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <TechStack items={stack} />
       </div>
     </main>
   )

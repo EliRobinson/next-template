@@ -80,3 +80,31 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  visual:
+    name: Visual tests
+    runs-on: ubuntu-latest
+    # The image the baselines were made in. Keep the tag equal to the
+    # @playwright/test version in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          node-auth-token: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Run visual tests
+        run: pnpm test:visual
+        env:
+          VISUAL_NATIVE: '1'
+
+      - name: Upload visual report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-visual
+          path: playwright-report-visual/
+          retention-days: 7
