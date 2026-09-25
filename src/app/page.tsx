@@ -1,5 +1,6 @@
 import { Eyebrow } from '@elirobinson/react/components/atoms/Eyebrow'
 import { TechStack } from '@/components/tech-stack'
+import type { StackItem } from '@/components/tech-stack'
 
 export default function Home() {
   return (
@@ -19,7 +20,7 @@ export default function Home() {
   )
 }
 
-const stack = [
+const stack: readonly StackItem[] = [
   { name: 'Next.js 16', description: 'App Router + Turbopack' },
   { name: 'TypeScript 5', description: 'Strict mode + path aliases' },
   { name: 'Tailwind CSS 4', description: 'Utility-first styling' },

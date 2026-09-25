@@ -52,6 +52,15 @@
       "groupName": "TypeScript ESLint"
     },
     {
+      "description": "Group Playwright and never auto-merge it. A new version ships a new Chromium, which moves the pixels in every visual baseline. Run `pnpm test:visual:update` on the PR and review the image diffs.",
+      "matchPackageNames": [
+        "@playwright/test",
+        "@playwright/experimental-ct-react"
+      ],
+      "groupName": "Playwright",
+      "automerge": false
+    },
+    {
       "description": "Require manual review for major version bumps",
       "matchUpdateTypes": ["major"],
       "automerge": false,
