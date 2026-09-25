@@ -27,7 +27,7 @@ Screenshot tests catch unintended visual change in one component at a time. They
 - Import `test` and `expect` from `tests/visual/test.ts`, not from Playwright. Its `mount` sets the theme.
 - The harness (`tests/visual/harness/`) loads `src/app/styles.ts`, the same stylesheets as the app.
 - A failure writes the expected, actual, and diff images to `test-results-visual/`. `pnpm exec playwright show-report playwright-report-visual` shows them side by side.
-- The pre-push hook runs `pnpm test:visual`, so a push needs Docker running.
+- The pre-push hook runs `pnpm test:visual` when the push changes `src/`, `tests/visual/`, the visual config or script, `package.json`, or `pnpm-lock.yaml`. Such a push needs Docker running. Other pushes skip it. `scripts/visual-changed.sh` decides.
 
 ### When to write one
 

@@ -1,6 +1,17 @@
+# Read git's list of pushed refs first, before any command can consume stdin.
+refs=$(cat)
+
 pnpm type-check
 pnpm lint
 pnpm format:check
 pnpm test:coverage
 pnpm test:e2e --project=chromium
-pnpm test:visual
+
+# Skip only on a clear "no" (exit 1). Any other failure runs the tests.
+status=0
+printf '%s\n' "$refs" | scripts/visual-changed.sh || status=$?
+if [ "$status" -eq 1 ]; then
+  echo "Visual tests skipped: this push changes no file that can move a baseline."
+else
+  pnpm test:visual
+fi
