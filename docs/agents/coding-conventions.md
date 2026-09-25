@@ -18,7 +18,7 @@ The rules live in "UI: design system first" in `AGENTS.md` and in `pnpm ds`. Wha
 - **This repo's sanctioned gap-filler is shadcn/ui in `src/components/ui/`.** It is the one place direct Radix imports are allowed. Add via `pnpm dlx shadcn@latest add <component>`, never by hand, and only for a primitive the design system does not cover. Restyle it with design system tokens.
 - `src/app/globals.css` imports `@elirobinson/tokens/tailwind.css`, which is what makes `bg-background` and friends resolve. It carries no aliases of its own. A new token needs no edit here.
 - Fonts come from the design system. `@elirobinson/tokens/tokens.css` self-hosts Geist and JetBrains Mono, so the app loads no `next/font` faces of its own and `globals.css` declares no `--ds-font-*-override`. Add one only for a family the system does not ship.
-- `@elirobinson/tokens/tokens.css` and `@elirobinson/react/styles.css` are imported once in `src/app/layout.tsx`. Do not re-import them per component.
+- `@elirobinson/tokens/tokens.css` and `@elirobinson/react/styles.css` are imported once, with `globals.css`, in `src/app/styles.ts`. The root layout and the visual test harness load that file. Do not import the stylesheets anywhere else.
 - Use Tailwind utilities for layout and spacing on JSX. Avoid custom CSS files.
 - Use `cn()` (from `@/lib/utils`) to merge conditional classes.
 - Class order is enforced by `prettier-plugin-tailwindcss`. Do not hand-sort.

@@ -1,4 +1,4 @@
-import type { Theme } from './harness'
-
 // Every component with color gets a baseline in each theme.
-export const themes: readonly Theme[] = ['light', 'dark']
+export const themes = ['light', 'dark'] as const
+
+export type Theme = (typeof themes)[number]

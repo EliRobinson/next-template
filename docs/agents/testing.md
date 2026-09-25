@@ -12,7 +12,7 @@
 
 - Test files live in `e2e/` with the pattern `*.spec.ts`.
 - Test critical user paths end-to-end against a running dev server.
-- Assert behavior with roles and text. Never compare screenshots here; see Screenshot regression below. ESLint blocks `toHaveScreenshot()` in `e2e/`.
+- Assert behavior with roles and text. Never compare screenshots here; see Screenshot regression below. ESLint blocks `toHaveScreenshot()` and `toMatchSnapshot()` in `e2e/`.
 - Use `page.getByRole()` and `page.getByText()` selectors (accessibility-first).
 - Avoid `page.locator("css selector")` unless no semantic alternative exists.
 - `e2e/design-system.spec.mts` runs the contract checks a linter can't settle: touch targets, visible focus, WCAG AA contrast. They come from `@elirobinson/ai-patterns/testing/playwright`. Add a case per route as the app grows. It is `.mts` because the helper is ESM-only and Playwright compiles a plain `.ts` spec to CJS.
@@ -23,7 +23,8 @@ Screenshot tests catch unintended visual change in one component at a time. They
 
 - Test files live in `tests/visual/` with the pattern `*.visual.tsx`. Config: `playwright-ct.config.ts`. Baselines live next to the tests in `tests/visual/__screenshots__/` and are committed.
 - `pnpm test:visual` runs them. `pnpm test:visual:update` rewrites the baselines. Both need Docker running.
-- `scripts/visual-test.sh` starts Linux Chromium in the Playwright Docker image and runs the tests against it, so every machine renders the same pixels. The config refuses any other browser. Never make baselines any other way. `VISUAL_NATIVE=1` skips Docker only when the run is already inside the Playwright image.
+- `scripts/visual-test.sh` starts Linux Chromium in the Playwright Docker image and runs the tests against it, so every machine renders the same pixels. The config refuses any other browser. Never make baselines any other way. Inside the Playwright image itself (as a CI container), the script skips Docker.
+- Import `test` and `expect` from `tests/visual/test.ts`, not from Playwright. Its `mount` sets the theme.
 - The harness (`tests/visual/harness/`) loads `src/app/styles.ts`, the same stylesheets as the app.
 - A failure writes the expected, actual, and diff images to `test-results-visual/`. `pnpm exec playwright show-report playwright-report-visual` shows them side by side.
 - The pre-push hook runs `pnpm test:visual`, so a push needs Docker running.
@@ -33,7 +34,7 @@ Screenshot tests catch unintended visual change in one component at a time. They
 Use a screenshot test when the thing under test is how a component looks, and no role or text assertion can say it:
 
 - Each visual state of a component this repo owns: variants, sizes, empty, loading, error, disabled.
-- Both themes for any component with color. Loop over `themes` from `tests/visual/themes.ts` and pass `hooksConfig: { theme }` to `mount`; the harness sets `data-theme` before each mount.
+- Both themes for any component with color. Loop over `themes` from `tests/visual/test.ts` and set each with `test.use({ theme })`.
 - Layout edge cases: long text, wrapping, overflow, many items, no items.
 - A visual bug you fixed. Lock the fix with a screenshot of the state that broke.
 

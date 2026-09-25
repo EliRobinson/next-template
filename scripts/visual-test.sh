@@ -4,14 +4,18 @@
 # the same pixels. The test runner stays on the host with its own node_modules;
 # only the browser is remote. Arguments pass through to `playwright test`, e.g.
 # --update-snapshots.
-#
-# Already inside the Playwright image? Set VISUAL_NATIVE=1 to skip Docker.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ "${VISUAL_NATIVE:-}" = "1" ]; then
-  exec pnpm exec playwright test -c playwright-ct.config.ts "$@"
+run_tests() {
+  pnpm exec playwright test -c playwright-ct.config.ts "$@"
+}
+
+# Already inside the Playwright image, which ships its browsers here.
+if [ -d /ms-playwright ]; then
+  run_tests "$@"
+  exit
 fi
 
 if ! docker info >/dev/null 2>&1; then
@@ -24,13 +28,14 @@ version=$(node -p "require('@playwright/test/package.json').version")
 
 # The npm cache volume keeps `npx` from downloading Playwright on every run.
 # It is mounted outside any home folder and opened up first, because Docker
-# creates a new named volume owned by root.
-container=$(docker run -d --rm --init --ipc=host -p 127.0.0.1::3000 \
+# creates a new named volume owned by root. No --rm: a container that crashes
+# must stay long enough to print its log. The trap removes it on every exit.
+container=$(docker run -d --init --ipc=host -p 127.0.0.1::3000 \
   -v next-template-playwright-npm:/npm-cache \
   -e npm_config_cache=/npm-cache \
   "mcr.microsoft.com/playwright:v${version}-noble" \
   /bin/sh -c "chmod 777 /npm-cache && exec su pwuser -c 'npx -y playwright@${version} run-server --port 3000 --host 0.0.0.0'")
-trap 'docker stop "$container" >/dev/null 2>&1 || true' EXIT
+trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
 
 port=$(docker port "$container" 3000/tcp | head -n1 | sed 's/.*://')
 
@@ -57,4 +62,4 @@ fi
 # <loopback> lets the remote browser reach the component server on this host.
 PW_TEST_CONNECT_WS_ENDPOINT="ws://127.0.0.1:${port}/" \
 PW_TEST_CONNECT_EXPOSE_NETWORK='<loopback>' \
-  pnpm exec playwright test -c playwright-ct.config.ts "$@"
+  run_tests "$@"

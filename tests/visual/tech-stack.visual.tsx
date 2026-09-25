@@ -1,7 +1,5 @@
-import { expect, test } from '@playwright/experimental-ct-react'
 import { TechStack } from '@/components/tech-stack'
-import type { HooksConfig } from './harness'
-import { themes } from './themes'
+import { expect, test, themes } from './test'
 
 const items = [
   { name: 'Next.js 16', description: 'App Router + Turbopack' },
@@ -9,26 +7,23 @@ const items = [
   { name: 'A long name that wraps onto a second line', description: 'Wrap' }
 ]
 
-// Widths clear of the `sm` breakpoint (640px) on each side.
+// Clear of every Tailwind breakpoint: `sm` is 640px and `md` 768px.
 const layouts = [
-  { name: 'wide', viewport: { width: 768, height: 400 } },
+  { name: 'wide', viewport: { width: 720, height: 400 } },
   { name: 'narrow', viewport: { width: 375, height: 600 } }
 ]
 
 for (const layout of layouts) {
-  test.describe(`tech stack grid, ${layout.name}`, () => {
-    test.use({ viewport: layout.viewport })
+  for (const theme of themes) {
+    test.describe(`tech stack grid, ${layout.name}, ${theme}`, () => {
+      test.use({ viewport: layout.viewport, theme })
 
-    for (const theme of themes) {
-      test(theme, async ({ mount }) => {
-        const component = await mount<HooksConfig>(
-          <TechStack items={items} />,
-          { hooksConfig: { theme } }
-        )
+      test('matches the baseline', async ({ mount }) => {
+        const component = await mount(<TechStack items={items} />)
         await expect(component).toHaveScreenshot(
           `tech-stack-${layout.name}-${theme}.png`
         )
       })
-    }
-  })
+    })
+  }
 }
