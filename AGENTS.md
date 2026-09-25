@@ -13,6 +13,7 @@ pnpm dev                # Dev server (Turbopack) on a random free port
 pnpm ds                 # Design system discovery
 pnpm exec ds-resync     # What is out of date in the design system
 pnpm commit             # Commitizen interactive commit
+pnpm test:visual        # Screenshot regression tests (needs Docker)
 ```
 
 ## Topic guides
