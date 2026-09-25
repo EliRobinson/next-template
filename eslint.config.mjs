@@ -59,7 +59,8 @@ const eslintConfig = [
       'no-restricted-syntax': [
         'error',
         {
-          selector: "CallExpression[callee.property.name='toHaveScreenshot']",
+          selector:
+            'CallExpression[callee.property.name=/^(toHaveScreenshot|toMatchSnapshot)$/]',
           message:
             'E2E specs assert behavior, not pixels. Put screenshot tests in tests/visual/.'
         }

@@ -21,7 +21,9 @@ export default defineConfig({
   testMatch: '**/*.visual.tsx',
   snapshotPathTemplate: '{testDir}/__screenshots__/{testFilePath}/{arg}{ext}',
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
+  // The pre-push hook is the gate, and it runs without CI set. A stray
+  // `test.only` would skip every other baseline. Use --grep for focused runs.
+  forbidOnly: true,
   retries: 0,
   reporter: [
     ['html', { outputFolder: 'playwright-report-visual', open: 'never' }]
