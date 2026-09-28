@@ -1,11 +1,10 @@
 # Read git's list of pushed refs first, before any command can consume stdin.
 refs=$(cat)
 
-# Keep dependencies current before any gate below runs against them. Frozen
-# so a push never rewrites the lockfile; a stale lockfile fails the push
-# instead of silently drifting.
+# Install exactly what pnpm-lock.yaml pins before any gate below runs
+# against node_modules. Frozen so a push never rewrites the lockfile.
 pnpm install --frozen-lockfile || {
-  echo "pnpm-lock.yaml is out of date with package.json. Run 'pnpm install' and commit the updated lockfile before pushing." >&2
+  echo "pnpm install --frozen-lockfile failed (see the pnpm output above). If it reports ERR_PNPM_OUTDATED_LOCKFILE, pnpm-lock.yaml is out of date with package.json: run 'pnpm install' and commit the update. Otherwise this is an install problem (network, registry auth, disk), not a lockfile problem." >&2
   exit 1
 }
 
