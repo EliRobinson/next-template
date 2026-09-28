@@ -22,6 +22,8 @@ Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` is 
 
 Husky hooks live in `.husky/`. Never bypass them (`--no-verify`). If a hook fails, fix the cause. Skip a hook only when a human says to. If a hook fails on a file you do not own, stop and tell the owner and the coordinator.
 
+`pre-push` starts with `pnpm install --frozen-lockfile`, so every gate that follows runs against exactly what `pnpm-lock.yaml` says, not whatever happens to be in `node_modules`. A push fails fast with a clear message if the lockfile is out of date with `package.json` — run `pnpm install` and commit the update.
+
 ## Review gate (before a PR is opened)
 
 Before a PR is opened, read-only reviewers run on the branch diff. The `review-gate` skill (`.agents/skills/review-gate/SKILL.md`) lists each reviewer, its model, and how to run it. Reviewers run on Opus, Sonnet, or Haiku only, never Fable. Fable costs too many tokens.

@@ -1,6 +1,14 @@
 # Read git's list of pushed refs first, before any command can consume stdin.
 refs=$(cat)
 
+# Keep dependencies current before any gate below runs against them. Frozen
+# so a push never rewrites the lockfile; a stale lockfile fails the push
+# instead of silently drifting.
+pnpm install --frozen-lockfile || {
+  echo "pnpm-lock.yaml is out of date with package.json. Run 'pnpm install' and commit the updated lockfile before pushing." >&2
+  exit 1
+}
+
 pnpm type-check
 pnpm lint
 pnpm format:check
