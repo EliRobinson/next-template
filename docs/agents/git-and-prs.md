@@ -22,7 +22,7 @@ Use `pnpm commit` for the interactive Commitizen prompt. Direct `git commit` is 
 
 Husky hooks live in `.husky/`. Never bypass them (`--no-verify`). If a hook fails, fix the cause. Skip a hook only when a human says to. If a hook fails on a file you do not own, stop and tell the owner and the coordinator.
 
-`pre-push` starts with `pnpm install --frozen-lockfile`, so every gate that follows runs against exactly what `pnpm-lock.yaml` says, not whatever happens to be in `node_modules`. A push fails fast with a clear message if the lockfile is out of date with `package.json` — run `pnpm install` and commit the update.
+`pre-push` starts with `pnpm install --frozen-lockfile`, so every gate that follows runs against exactly what `pnpm-lock.yaml` says, not whatever happens to be in `node_modules`. If `pnpm-lock.yaml` is out of date with `package.json`, the install fails and the push stops there; run `pnpm install` and commit the update. Any other install failure (network, registry auth, disk) stops the push the same way but is not a lockfile problem.
 
 ## Review gate (before a PR is opened)
 
